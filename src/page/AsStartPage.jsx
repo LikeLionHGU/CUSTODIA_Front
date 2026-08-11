@@ -37,8 +37,6 @@ const SERVICE_NOTICES = [
   "신원 확인된 기사가 제품을 직접 수거하며, 운송 구간 전체에 보험이 적용됩니다.",
 ];
 
-const NAV_ITEMS = ["AI 견적", "AS 접수", "나의 AS", "AI 상담"];
-
 const Page = styled.div`
   width: 100%;
   display: flex;
@@ -51,53 +49,6 @@ const Page = styled.div`
   overflow: hidden;
   box-sizing: border-box;
   text-align: left;
-`;
-
-const Header = styled.header`
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 24px;
-  box-sizing: border-box;
-  background: #fff;
-  border-bottom: 1px solid #d0d0d0;
-`;
-
-const Logo = styled.p`
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
-  white-space: nowrap;
-`;
-
-const Spacer = styled.div`
-  flex: 1 0 0;
-`;
-
-const NavLink = styled.a`
-  font-size: 14px;
-  color: #6b7280;
-  text-decoration: underline;
-  white-space: nowrap;
-  cursor: pointer;
-`;
-
-const Avatar = styled.div`
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: #d1d5db;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const AvatarLabel = styled.span`
-  font-size: 11px;
-  color: #fff;
 `;
 
 const BodyRow = styled.div`
@@ -254,17 +205,6 @@ const Button = styled.button`
 export default function AsStartPage() {
   return (
     <Page>
-      <Header>
-        <Logo>MCM 케어</Logo>
-        <Spacer />
-        {NAV_ITEMS.map((item) => (
-          <NavLink key={item}>{item}</NavLink>
-        ))}
-        <Avatar>
-          <AvatarLabel>Aa</AvatarLabel>
-        </Avatar>
-      </Header>
-
       <BodyRow>
         <Body>
           <SectionTitle>AS 접수</SectionTitle>

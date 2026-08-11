@@ -1,20 +1,34 @@
+import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import styled, { css } from "styled-components";
 
-const NAV_ITEMS = ["AI 견적", "AS 접수", "나의 AS", "AI 상담"];
+const PRODUCT_TYPE_OPTIONS = ["가방", "지갑", "벨트", "신발", "소품", "기타"];
+const PURCHASE_PLACE_OPTIONS = ["MCM 공식매장", "백화점", "면세점", "온라인스토어", "기타"];
+const DAMAGE_TYPE_OPTIONS = ["찍힘", "긁힘", "변색", "금속부품손상", "봉제손상", "기타"];
+
+const MAX_PHOTOS = 3;
 
 const PRODUCT_FIELDS = [
-  { label: "보증서 번호 (밑에 정보 자동 입력)", type: "text" },
-  { label: "제품 종류", type: "select" },
-  { label: "제품 모델명", type: "text" },
-  { label: "구매 날짜", type: "select" },
-  { label: "구매처", type: "select" },
+  { key: "warrantyNumber", label: "보증서 번호 (밑에 정보 자동 입력)", type: "text" },
+  { key: "productType", label: "제품 종류", type: "select", options: PRODUCT_TYPE_OPTIONS },
+  { key: "modelName", label: "제품 모델명", type: "text" },
+  { key: "purchaseDate", label: "구매 날짜", type: "date" },
+  { key: "purchasePlace", label: "구매처", type: "select", options: PURCHASE_PLACE_OPTIONS },
 ];
 
 const DAMAGE_FIELDS = [
-  { label: "손상 부위", type: "text" },
-  { label: "손상 유형", type: "select" },
-  { label: "손상 경위 및 상태 설명", type: "area" },
+  { key: "damagePart", label: "손상 부위", type: "text" },
+  { key: "damageType", label: "손상 유형", type: "select", options: DAMAGE_TYPE_OPTIONS },
+  { key: "damageDesc", label: "손상 경위 및 상태 설명", type: "area" },
 ];
+
+function getTodayDateString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 const Page = styled.div`
   width: 100%;
@@ -30,51 +44,8 @@ const Page = styled.div`
   text-align: left;
 `;
 
-const Header = styled.header`
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 24px;
-  box-sizing: border-box;
-  background: #fff;
-  border-bottom: 1px solid #d0d0d0;
-`;
-
-const Logo = styled.p`
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
-  white-space: nowrap;
-`;
-
 const Spacer = styled.div`
   flex: 1 0 0;
-`;
-
-const NavLink = styled.a`
-  font-size: 14px;
-  color: #6b7280;
-  text-decoration: underline;
-  white-space: nowrap;
-  cursor: pointer;
-`;
-
-const Avatar = styled.div`
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: #d1d5db;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const AvatarLabel = styled.span`
-  font-size: 11px;
-  color: #fff;
 `;
 
 const BodyRow = styled.div`
@@ -151,6 +122,11 @@ const Button = styled.button`
             color: #fff;
             font-weight: 500;
           `}
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 const Columns = styled.div`
@@ -249,7 +225,7 @@ const Select = styled.select`
   border-radius: 4px;
   background: #fff;
   font-size: 14px;
-  color: #9ca3af;
+  color: ${(props) => (props.$hasValue ? "#1f2937" : "#9ca3af")};
   appearance: none;
 `;
 
@@ -268,9 +244,25 @@ const UploadNote = styled.p`
   color: #1f2937;
 `;
 
-const UploadBox = styled.div`
+const UploadRow = styled.div`
   width: 100%;
-  height: 160px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+`;
+
+const PhotoGrid = styled.div`
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+`;
+
+const PhotoSlot = styled.div`
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -278,16 +270,39 @@ const UploadBox = styled.div`
   background: #f9fafb;
   border: 1px dashed #d1d5db;
   border-radius: 6px;
+  overflow: hidden;
   font-size: 11px;
   color: #9ca3af;
+  text-align: center;
 `;
 
-const UploadRow = styled.div`
+const PhotoImg = styled.img`
   width: 100%;
+  height: 100%;
+  object-fit: cover;
+`;
+
+const RemovePhotoButton = styled.button`
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(31, 41, 55, 0.7);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
 `;
 
 const InfoTitle = styled.p`
@@ -327,18 +342,24 @@ function ChevronIcon() {
   );
 }
 
-function FormField({ label, type }) {
+function FormField({ label, type, options, value, onChange, max }) {
   return (
     <FieldGroup>
       <FieldLabel>{label}</FieldLabel>
-      {type === "text" && <TextInput type="text" />}
-      {type === "area" && <TextArea />}
+      {type === "text" && <TextInput type="text" value={value} onChange={onChange} />}
+      {type === "date" && <TextInput type="date" value={value} onChange={onChange} max={max} />}
+      {type === "area" && <TextArea value={value} onChange={onChange} />}
       {type === "select" && (
         <SelectWrapper>
-          <Select defaultValue="">
+          <Select value={value} onChange={onChange} $hasValue={!!value}>
             <option value="" disabled hidden>
-              Select…
+              선택
             </option>
+            {options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
           </Select>
           <ChevronIcon />
         </SelectWrapper>
@@ -348,23 +369,60 @@ function FormField({ label, type }) {
 }
 
 export default function ProductInfoPage() {
+  const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+  const todayDateString = getTodayDateString();
+
+  const [formData, setFormData] = useState({
+    warrantyNumber: "",
+    productType: "",
+    modelName: "",
+    purchaseDate: "",
+    purchasePlace: "",
+    damagePart: "",
+    damageType: "",
+    damageDesc: "",
+  });
+  const [photos, setPhotos] = useState([]);
+
+  const handleFieldChange = (key) => (e) => {
+    setFormData((prev) => ({ ...prev, [key]: e.target.value }));
+  };
+
+  const handleAddPhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setPhotos((prev) => {
+      const remainingSlots = MAX_PHOTOS - prev.length;
+      const newPhotos = files.slice(0, remainingSlots).map((file) => ({
+        id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+        url: URL.createObjectURL(file),
+      }));
+      return [...prev, ...newPhotos];
+    });
+
+    e.target.value = "";
+  };
+
+  const handleRemovePhoto = (id) => {
+    setPhotos((prev) => {
+      const target = prev.find((photo) => photo.id === id);
+      if (target) URL.revokeObjectURL(target.url);
+      return prev.filter((photo) => photo.id !== id);
+    });
+  };
+
   return (
     <Page>
-      <Header>
-        <Logo>MCM 케어</Logo>
-        <Spacer />
-        {NAV_ITEMS.map((item) => (
-          <NavLink key={item}>{item}</NavLink>
-        ))}
-        <Avatar>
-          <AvatarLabel>Aa</AvatarLabel>
-        </Avatar>
-      </Header>
-
       <BodyRow>
         <Body>
           <TopBar>
-            <Button type="button" $variant="link">
+            <Button type="button" $variant="link" onClick={() => navigate("/as-start")}>
               AS 접수 시작으로
             </Button>
             <Spacer />
@@ -378,14 +436,29 @@ export default function ProductInfoPage() {
               <Card>
                 <CardTitle>제품 정보</CardTitle>
                 {PRODUCT_FIELDS.map((field) => (
-                  <FormField key={field.label} label={field.label} type={field.type} />
+                  <FormField
+                    key={field.key}
+                    label={field.label}
+                    type={field.type}
+                    options={field.options}
+                    value={formData[field.key]}
+                    onChange={handleFieldChange(field.key)}
+                    max={field.type === "date" ? todayDateString : undefined}
+                  />
                 ))}
               </Card>
 
               <Card>
                 <CardTitle>손상 설명</CardTitle>
                 {DAMAGE_FIELDS.map((field) => (
-                  <FormField key={field.label} label={field.label} type={field.type} />
+                  <FormField
+                    key={field.key}
+                    label={field.label}
+                    type={field.type}
+                    options={field.options}
+                    value={formData[field.key]}
+                    onChange={handleFieldChange(field.key)}
+                  />
                 ))}
               </Card>
             </LeftColumn>
@@ -395,18 +468,39 @@ export default function ProductInfoPage() {
                 <CardTitle>손상 사진 업로드</CardTitle>
                 <UploadNote>
                   전체 제품 사진 1장과 손상 부위 사진을 최소 1장 이상 첨부해 주세요. 선명한 사진일수록 견적 정확도가
-                  높아집니다.
+                  높아집니다. (최대 {MAX_PHOTOS}장)
                 </UploadNote>
-                <UploadBox>Image</UploadBox>
-                <UploadBox>Image</UploadBox>
+                <PhotoGrid>
+                  {photos.map((photo) => (
+                    <PhotoSlot key={photo.id}>
+                      <PhotoImg src={photo.url} alt="손상 사진" />
+                      <RemovePhotoButton type="button" onClick={() => handleRemovePhoto(photo.id)}>
+                        ×
+                      </RemovePhotoButton>
+                    </PhotoSlot>
+                  ))}
+                  {photos.length === 0 && <PhotoSlot>업로드된 사진 없음</PhotoSlot>}
+                </PhotoGrid>
                 <UploadRow>
-                  <Button type="button" $variant="secondary">
-                    사진 추가
+                  <Button
+                    type="button"
+                    $variant="secondary"
+                    onClick={handleAddPhotoClick}
+                    disabled={photos.length >= MAX_PHOTOS}
+                  >
+                    사진 추가 ({photos.length}/{MAX_PHOTOS})
                   </Button>
                   <Button type="button" $variant="link">
                     추가 사진 요청 안내 확인
                   </Button>
                 </UploadRow>
+                <HiddenFileInput
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                />
               </Card>
 
               <Card>
