@@ -515,7 +515,12 @@ export default function ProductInfoPage() {
             <Button type="button" $variant="secondary">
               임시 저장
             </Button>
-            <Button type="button">예상 견적 확인하기</Button>
+            <Button
+              type="button"
+              onClick={() => navigate("/ai-estimate", { state: { formData, photos } })}
+            >
+              예상 견적 확인하기
+            </Button>
           </BottomRow>
         </Body>
       </BodyRow>
