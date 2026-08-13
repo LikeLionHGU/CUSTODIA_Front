@@ -69,6 +69,7 @@ const router = createBrowserRouter([
         path: "pickup-reservation",
         element: <PickupReservationPage />,
       },
+      
       {
         path: "reservation-complete",
         element: <ReservationCompletePage />,

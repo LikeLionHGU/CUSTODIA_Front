@@ -16,8 +16,8 @@ function Links() {
   return (
     <>
       <NavigatorText to="/product-info">AI 견적</NavigatorText>
-      <NavigatorText to="/as-start">AS 접수</NavigatorText>
-      <NavigatorText to="/my-as-list">나의 AS</NavigatorText>
+      <NavigatorText to="/as-start">A/S 접수</NavigatorText>
+      <NavigatorText to="/my-as-list">A/S 조회</NavigatorText>
       <NavigatorText to="/pick-as">AI 상담</NavigatorText>
     </>
   );
@@ -33,9 +33,9 @@ const Container = styled.div`
     z-index: 100;
     width: 100%;
     height: 80px;
-    padding: 0 24px;
+    padding: 0 48px;
     background-color: white;
-    border-bottom: 1px solid #f2eeee;
+    border-bottom: 1px solid #ededed;
     box-sizing: border-box;
 
     @media (max-width: 640px) {
@@ -58,14 +58,18 @@ const NavigatorContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 24px;
+  gap: 48px;
 
   @media (max-width: 640px) {
     display: none;
   }
 `
 const NavigatorText = styled(Link)`
-    color:black;
-    font-size: 13px;
-    font-weight: 600;
+    color: #000;
+    font-family: "Noto Sans KR", "Pretendard", sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 0;
 `
