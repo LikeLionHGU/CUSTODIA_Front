@@ -35,6 +35,10 @@ Known environment issue: in some Windows shells `npm run build` exits non-zero (
 
 **Styling.** `styled-components` v6 only — no CSS modules/Tailwind. Variant props on styled components use a `$`-prefixed transient prop (e.g. `$variant="secondary"`, `$hasValue`, `$selected`) to avoid leaking non-standard attributes to the DOM, switched via `css` helper blocks or ternaries. Global reset lives in `src/css/index.css`.
 
+**Shared components.** Besides `Header`/`Footer`, `src/components/Button.jsx` is the one reused UI primitive across pages — takes `variant` (`"filled"` default / `"stroke"`) and `size` (`"default"` / `"big"`) props, not raw `<button>`s. Everything else in a page (cards, form fields, layout) is page-local styled-components per the shell convention above, not extracted into `src/components`.
+
+**No backend yet.** There is no API/fetch layer — pages work off local constants/mock data defined in the page file itself (e.g. `home.jsx`'s `AS_ITEMS`) or off `useLocation().state` passed from the previous step. When implementing a feature that would need real data, follow this pattern (module-level mock array/object in the page) rather than introducing a data-fetching library.
+
 **Compiler.** React Compiler is enabled (`babel-plugin-react-compiler` via `@rolldown/plugin-babel` in `vite.config.js`) — avoid manual `useMemo`/`useCallback` micro-optimizations that fight the compiler; write plain component code.
 
 ## Figma
