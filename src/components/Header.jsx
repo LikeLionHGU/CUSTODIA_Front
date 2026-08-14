@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import styled from "styled-components";
 
 import Logo from "../assets/logo_main.svg";
@@ -13,12 +13,22 @@ export default function Header() {
 }
 
 function Links() {
+  const { pathname } = useLocation();
+
   return (
     <>
-      <NavigatorText to="/product-info">AI 견적</NavigatorText>
-      <NavigatorText to="/as-start">A/S 접수</NavigatorText>
-      <NavigatorText to="/my-as-list">A/S 조회</NavigatorText>
-      <NavigatorText to="/pick-as">AI 상담</NavigatorText>
+      <NavigatorText to="/product-info" $active={pathname === "/product-info"}>
+        AI 견적
+      </NavigatorText>
+      <NavigatorText to="/as-start" $active={pathname === "/as-start"}>
+        A/S 접수
+      </NavigatorText>
+      <NavigatorText to="/my-as-list" $active={pathname === "/my-as-list"}>
+        A/S 조회
+      </NavigatorText>
+      <NavigatorText to="/pick-as" $active={pathname === "/pick-as"}>
+        AI 상담
+      </NavigatorText>
     </>
   );
 }
@@ -72,4 +82,5 @@ const NavigatorText = styled(Link)`
     letter-spacing: 1px;
     text-transform: uppercase;
     padding: 8px 0;
+    border-bottom: 1px solid ${(props) => (props.$active ? "#000" : "transparent")};
 `

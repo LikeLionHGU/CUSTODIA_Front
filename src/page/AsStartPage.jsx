@@ -1,25 +1,60 @@
+import { useState } from "react";
 import styled from "styled-components";
+import { useNavigate } from "react-router-dom";
+import Button from "../components/Button";
+import chevronIcon from "../assets/icon_chevron.svg";
+import stepBg from "../assets/icon_step_bg.svg";
+import stepCertificate from "../assets/icon_step_certificate.svg";
+import stepCamera from "../assets/icon_step_camera.svg";
+import stepSchedule from "../assets/icon_step_schedule.svg";
+import stepPackage from "../assets/icon_step_package.svg";
+import stepConnector from "../assets/icon_step_connector.svg";
+
+const START_CARDS = [
+  {
+    title: "접수 시작",
+    text: "아래 버튼을 눌러 제품 정보 입력을 시작하세요.",
+    buttonLabel: "AS 접수 시작하기",
+    to: "/product-info",
+  },
+  {
+    title: "예상 견적 먼저 확인하기",
+    text: "접수 전에 손상 사진을 제출하면 AI가 예상 수선 비용 범위를 안내합니다.",
+    buttonLabel: "AI 예상 견적 받기",
+    to: "/product-info",
+  },
+  {
+    title: "문의가 있으신가요?",
+    text: "접수 절차, 비용, 소요 기간에 대한 사항은 AI 상담 또는 상담원 연결로 안내받을 수 있습니다.",
+    buttonLabel: "AI 상담 시작",
+    to: "/pick-as",
+  },
+];
 
 const CHECKLIST_ITEMS = [
   {
     number: "01",
-    label: "구매 영수증 또는 정품 보증서",
-    desc: "접수 시 구매 이력 확인에 사용됩니다. 온라인 구매 고객은 주문번호로 대체 가능합니다.",
+    icon: stepCertificate,
+    label: "구매 증빙",
+    desc: "구매 이력 확인에 사용됩니다. 온라인 구매는 주문번호로 대체 가능합니다.",
   },
   {
     number: "02",
-    label: "제품 사진 준비 (손상 부위 포함)",
-    desc: "손상 유형 분류와 예상 견적 안내에 활용됩니다. 선명한 사진을 준비해 주세요.",
+    icon: stepCamera,
+    label: "제품 사진",
+    desc: "손상 유형 및 예상 견적 확인을 위해 선명한 사진을 준비해 주세요.",
   },
   {
     number: "03",
-    label: "수거 주소 및 픽업 가능 일정 확인",
+    icon: stepSchedule,
+    label: "수거 일정",
     desc: "접수 후 픽업 예약 단계에서 날짜와 시간대를 선택합니다.",
   },
   {
     number: "04",
-    label: "부속품 분리 및 개인 소지품 제거",
-    desc: "제품 본체만 인계해 주세요. 분실 방지를 위해 내부 소지품을 미리 꺼내 주시기 바랍니다.",
+    icon: stepPackage,
+    label: "제품 정리",
+    desc: "제품 본체만 인계할 수 있도록 부속품과 개인 소지품을 미리 제거해 주세요.",
   },
 ];
 
@@ -31,7 +66,7 @@ const SCHEDULE_ITEMS = [
 ];
 
 const SERVICE_NOTICES = [
-  "MCM 케어 AS는 정품 부자재와 공인 수선 기술을 사용합니다.",
+  "CUSTODIA A/S는 정품 부자재와 공인 수선 기술을 사용합니다.",
   "예상 견적은 참고용이며, 실물 진단 후 최종 비용이 확정됩니다.",
   "수선 진행 상황은 리페어 패스포트에서 실시간으로 확인하실 수 있습니다.",
   "신원 확인된 기사가 제품을 직접 수거하며, 운송 구간 전체에 보험이 적용됩니다.",
@@ -42,43 +77,32 @@ const Page = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+  background: #f9f9f9;
   box-sizing: border-box;
   text-align: left;
 `;
 
-const BodyRow = styled.div`
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-`;
-
 const Body = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 16px;
-  padding: 24px;
+  gap: 24px;
+  padding: 52px 48px;
   box-sizing: border-box;
 `;
 
-const SectionTitle = styled.p`
+const PageTitle = styled.p`
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
+  font-size: 22px;
+  font-weight: 700;
+  color: #000;
 `;
 
 const Columns = styled.div`
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
   align-items: start;
   gap: 24px;
 
@@ -91,143 +115,279 @@ const LeftColumn = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 32px;
 `;
 
 const RightColumn = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 `;
 
-const Card = styled.div`
+const StartCard = styled.div`
   width: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 32px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
 `;
 
-const CardTitle = styled.p`
+const StartCardTitle = styled.p`
   margin: 0;
   font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
+  font-weight: 700;
+  color: #000;
 `;
 
-const CardText = styled.p`
+const StartCardText = styled.p`
   margin: 0;
-  font-size: 12px;
-  color: #1f2937;
+  font-size: 16px;
+  line-height: 26px;
+  color: #000;
+`;
+
+const SectionBlock = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+`;
+
+const SectionHeader = styled.button`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 12px;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+`;
+
+const SectionHeaderTitle = styled.p`
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #222;
+`;
+
+const SectionChevron = styled.img`
+  width: 24px;
+  height: 24px;
+  transform: rotate(${(props) => (props.$open ? "-90deg" : "90deg")});
 `;
 
 const ChecklistGroup = styled.div`
   width: 100%;
+  box-sizing: border-box;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 24px;
+  padding: 12px 0;
 `;
 
 const ChecklistItem = styled.div`
   width: 100%;
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 20px;
+`;
+
+const ChecklistIconWrap = styled.div`
+  position: relative;
+  flex-shrink: 0;
+  width: 76px;
+  height: 76px;
+`;
+
+const ChecklistIconBg = styled.img`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+`;
+
+const ChecklistIconGlyph = styled.img`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 42px;
+  width: auto;
+`;
+
+const ChecklistConnector = styled.img`
+  position: absolute;
+  left: 50%;
+  top: 78px;
+  width: 1px;
+  height: 20px;
+  transform: translateX(-50%);
+`;
+
+const ChecklistBody = styled.div`
+  min-width: 0;
+  flex: 1 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const ChecklistNumber = styled.p`
   margin: 0;
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const ChecklistBody = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #222;
 `;
 
 const ChecklistLabel = styled.p`
   margin: 0;
-  font-size: 12px;
-  color: #1f2937;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #222;
 `;
 
 const ChecklistDesc = styled.p`
   margin: 0;
-  font-size: 11px;
-  color: #1f2937;
+  font-size: 12px;
+  line-height: 20px;
+  color: #313131;
 `;
 
 const ScheduleList = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
 `;
 
 const ScheduleRow = styled.div`
   width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const NoticeList = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
   gap: 8px;
+  padding: 16px 8px;
+  border-bottom: 1px solid #d1d5db;
+  font-size: 14px;
+  color: #313131;
+
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
-const Button = styled.button`
-  min-width: 60px;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid #1f2937;
-  background: ${(props) => (props.$variant === "secondary" ? "#fff" : "#1f2937")};
-  color: ${(props) => (props.$variant === "secondary" ? "#1f2937" : "#fff")};
+const NoticeList = styled.ol`
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: notice;
 `;
+
+const NoticeItem = styled.li`
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 16px 4px;
+  font-size: 14px;
+  line-height: 14px;
+  color: #313131;
+  counter-increment: notice;
+
+  &::before {
+    content: counter(notice) ".";
+  }
+`;
+
+const INITIAL_OPEN_SECTIONS = {
+  checklist: false,
+  schedule: false,
+  notice: false,
+};
 
 export default function AsStartPage() {
+  const navigate = useNavigate();
+  const [openSections, setOpenSections] = useState(INITIAL_OPEN_SECTIONS);
+
+  const toggleSection = (key) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
     <Page>
-      <BodyRow>
-        <Body>
-          <SectionTitle>AS 접수</SectionTitle>
+      <Body>
+        <PageTitle>AS 접수</PageTitle>
 
-          <Columns>
-            <LeftColumn>
-              <Card>
-                <CardTitle>접수 전 확인 사항</CardTitle>
+        <Columns>
+          <LeftColumn>
+            {START_CARDS.map((card) => (
+              <StartCard key={card.title}>
+                <StartCardTitle>{card.title}</StartCardTitle>
+                <StartCardText>{card.text}</StartCardText>
+                <Button type="button" variant="filled" onClick={() => navigate(card.to)}>
+                  {card.buttonLabel}
+                </Button>
+              </StartCard>
+            ))}
+          </LeftColumn>
+
+          <RightColumn>
+            <SectionBlock>
+              <SectionHeader
+                type="button"
+                aria-expanded={openSections.checklist}
+                onClick={() => toggleSection("checklist")}
+              >
+                <SectionHeaderTitle>접수 전 확인 사항</SectionHeaderTitle>
+                <SectionChevron src={chevronIcon} alt="" $open={openSections.checklist} />
+              </SectionHeader>
+              {openSections.checklist && (
                 <ChecklistGroup>
-                  {CHECKLIST_ITEMS.map((item) => (
+                  {CHECKLIST_ITEMS.map((item, index) => (
                     <ChecklistItem key={item.number}>
-                      <ChecklistNumber>{item.number}</ChecklistNumber>
+                      <ChecklistIconWrap>
+                        <ChecklistIconBg src={stepBg} alt="" />
+                        <ChecklistIconGlyph src={item.icon} alt="" />
+                        {index < CHECKLIST_ITEMS.length - 1 && (
+                          <ChecklistConnector src={stepConnector} alt="" />
+                        )}
+                      </ChecklistIconWrap>
                       <ChecklistBody>
+                        <ChecklistNumber>{item.number}</ChecklistNumber>
                         <ChecklistLabel>{item.label}</ChecklistLabel>
                         <ChecklistDesc>{item.desc}</ChecklistDesc>
                       </ChecklistBody>
                     </ChecklistItem>
                   ))}
                 </ChecklistGroup>
-              </Card>
+              )}
+            </SectionBlock>
 
-              <Card>
-                <CardTitle>예상 소요 안내</CardTitle>
+            <SectionBlock>
+              <SectionHeader
+                type="button"
+                aria-expanded={openSections.schedule}
+                onClick={() => toggleSection("schedule")}
+              >
+                <SectionHeaderTitle>예상 소요 안내</SectionHeaderTitle>
+                <SectionChevron src={chevronIcon} alt="" $open={openSections.schedule} />
+              </SectionHeader>
+              {openSections.schedule && (
                 <ScheduleList>
                   {SCHEDULE_ITEMS.map((item) => (
                     <ScheduleRow key={item.label}>
@@ -236,50 +396,29 @@ export default function AsStartPage() {
                     </ScheduleRow>
                   ))}
                 </ScheduleList>
-              </Card>
+              )}
+            </SectionBlock>
 
-              <Card>
-                <CardTitle>AS 서비스 안내</CardTitle>
+            <SectionBlock>
+              <SectionHeader
+                type="button"
+                aria-expanded={openSections.notice}
+                onClick={() => toggleSection("notice")}
+              >
+                <SectionHeaderTitle>A/S 서비스 안내</SectionHeaderTitle>
+                <SectionChevron src={chevronIcon} alt="" $open={openSections.notice} />
+              </SectionHeader>
+              {openSections.notice && (
                 <NoticeList>
                   {SERVICE_NOTICES.map((notice) => (
-                    <CardText key={notice}>{notice}</CardText>
+                    <NoticeItem key={notice}>{notice}</NoticeItem>
                   ))}
                 </NoticeList>
-              </Card>
-            </LeftColumn>
-
-            <RightColumn>
-              <Card>
-                <CardTitle>접수 시작</CardTitle>
-                <CardText>
-                  아래 버튼을 눌러 제품 정보 입력을 시작하세요. 제품명, 구매일, 손상 부위 사진을 순서대로 입력합니다.
-                </CardText>
-                <Button type="button">AS 접수 시작하기</Button>
-              </Card>
-
-              <Card>
-                <CardTitle>예상 견적 먼저 확인하기</CardTitle>
-                <CardText>
-                  접수 전에 손상 사진을 제출하면 AI가 예상 수선 비용 범위를 안내합니다. 접수 여부와 무관하게 이용 가능합니다.
-                </CardText>
-                <Button type="button" $variant="secondary">
-                  AI 예상 견적 받기
-                </Button>
-              </Card>
-
-              <Card>
-                <CardTitle>문의가 있으신가요?</CardTitle>
-                <CardText>
-                  접수 절차, 비용, 소요 기간에 대한 궁금한 사항은 AI 상담 또는 상담원 연결로 안내받을 수 있습니다.
-                </CardText>
-                <Button type="button" $variant="secondary">
-                  AI 상담 시작
-                </Button>
-              </Card>
-            </RightColumn>
-          </Columns>
-        </Body>
-      </BodyRow>
+              )}
+            </SectionBlock>
+          </RightColumn>
+        </Columns>
+      </Body>
     </Page>
   );
 }

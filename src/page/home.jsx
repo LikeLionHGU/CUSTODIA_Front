@@ -44,11 +44,7 @@ const Page = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+  background: #f9f9f9;
   box-sizing: border-box;
   text-align: left;
 `;
@@ -64,7 +60,7 @@ const Body = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 48px;
+  padding: 52px 48px;
   box-sizing: border-box;
 `;
 
@@ -107,14 +103,14 @@ const HeroTitle = styled.p`
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #000;
+  color: #222;
 `;
 
 const HeroDescription = styled.p`
   margin: 0;
   font-size: 16px;
   font-weight: 400;
-  color: #000;
+  color: #222;
 `;
 
 const AsListSection = styled.div`
@@ -159,13 +155,13 @@ const AsItemName = styled.p`
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #1f2937;
+  color: #222;
 `;
 
 const AsItemStatus = styled.p`
   margin: 0;
   font-size: 14px;
-  color: #1f2937;
+  color: #313131;
 `;
 
 const AsItemHighlight = styled.span`
@@ -181,16 +177,16 @@ const EmptyAsList = styled.p`
   border-bottom: 1px solid #d1d5db;
   text-align: center;
   font-size: 14px;
-  color: #6d707b;
+  color: #313131;
 `;
 
 const ViewAllLink = styled.button`
   border: none;
-  border-bottom: 1px solid #6d707b;
+  border-bottom: 1px solid #313131;
   background: none;
   padding: 4px 0;
   font-size: 14px;
-  color: #6d707b;
+  color: #313131;
   cursor: pointer;
 `;
 
@@ -202,7 +198,7 @@ const InfoCard = styled.div`
   align-items: flex-start;
   gap: 20px;
   padding: 32px;
-  background: #f6f6f6;
+  background: #f0f0f0;
   border-radius: 4px;
 `;
 
@@ -210,14 +206,14 @@ const InfoCardTitle = styled.p`
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #000;
+  color: #222;
 `;
 
 const InfoCardText = styled.p`
   margin: 0;
   font-size: 16px;
   line-height: 26px;
-  color: #000;
+  color: #222;
 `;
 
 const UploadBox = styled.div`
@@ -228,11 +224,11 @@ const UploadBox = styled.div`
   align-items: center;
   justify-content: center;
   background: #fff;
-  border: 1px dashed #6d707b;
+  border: 1px dashed #313131;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 700;
-  color: #6d707b;
+  color: #313131;
 `;
 
 const FullWidthButton = styled(Button)`
