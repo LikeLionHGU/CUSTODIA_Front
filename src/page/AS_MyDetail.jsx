@@ -322,7 +322,7 @@ const ConsultButtonRow = styled.div`
   justify-content: flex-end;
 `;
 
-export default function MyAsDetailPage() {
+export default function AS_MyDetail() {
   const navigate = useNavigate();
   const location = useLocation();
 

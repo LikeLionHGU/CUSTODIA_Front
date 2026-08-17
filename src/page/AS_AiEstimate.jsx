@@ -259,7 +259,7 @@ const Button = styled.button`
   color: #fff;
 `;
 
-export default function AiEstimatePage() {
+export default function AS_AiEstimate() {
   const navigate = useNavigate();
   const location = useLocation();
 

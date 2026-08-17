@@ -137,7 +137,7 @@ const Button = styled.button`
   color: #fff;
 `;
 
-export default function ReservationCompletePage() {
+export default function AS_ReservationComplete() {
   const navigate = useNavigate();
   const location = useLocation();
 

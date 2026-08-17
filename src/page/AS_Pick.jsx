@@ -1,4 +1,3 @@
-import { useLocation } from "react-router-dom";
 import styled from "styled-components";
 
 const Page = styled.div`
@@ -45,34 +44,13 @@ const CardText = styled.p`
   color: #1f2937;
 `;
 
-const Card = styled.div`
-  width: 100%;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-`;
-
-export default function AiConciergePage() {
-  const location = useLocation();
-  const asCase = location.state?.asCase;
-
+export default function AS_Pick() {
   return (
     <Page>
       <BodyRow>
         <Body>
-          <SectionTitle>AI 컨시어지</SectionTitle>
+          <SectionTitle>AI 상담 - 접수 건 선택</SectionTitle>
           <CardText>준비 중인 페이지입니다.</CardText>
-          {asCase && (
-            <Card>
-              <CardText>선택한 AS 건: {asCase.id}</CardText>
-              <CardText>{asCase.productName}</CardText>
-            </Card>
-          )}
         </Body>
       </BodyRow>
     </Page>

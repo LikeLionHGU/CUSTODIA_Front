@@ -463,7 +463,7 @@ function ChevronIcon({ wrapper: Wrapper = ChevronWrap }) {
   );
 }
 
-export default function PickupReservationPage() {
+export default function AS_PickupReservation() {
   const navigate = useNavigate();
   const location = useLocation();
 

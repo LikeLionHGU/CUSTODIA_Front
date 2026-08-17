@@ -280,7 +280,7 @@ const Button = styled.button`
   color: #fff;
 `;
 
-export default function MyAsListPage() {
+export default function AS_MyList() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState("전체");
 

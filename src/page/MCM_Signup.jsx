@@ -14,7 +14,7 @@ const fields = [
   { id: "phone", label: "연락처*", type: "tel", autoComplete: "tel" },
 ];
 
-export default function Signup() {
+export default function MCM_Signup() {
   const handleSubmit = (event) => {
     event.preventDefault();
   };

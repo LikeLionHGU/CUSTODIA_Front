@@ -320,7 +320,7 @@ const INITIAL_OPEN_SECTIONS = {
   notice: false,
 };
 
-export default function AsStartPage() {
+export default function AS_Start() {
   const navigate = useNavigate();
   const [openSections, setOpenSections] = useState(INITIAL_OPEN_SECTIONS);
 

@@ -235,7 +235,7 @@ const FullWidthButton = styled(Button)`
   width: 100%;
 `;
 
-export default function Home() {
+export default function MCM_Home() {
   const navigate = useNavigate();
   const visibleAsItems = AS_ITEMS.slice(0, MAX_VISIBLE_AS_ITEMS);
 

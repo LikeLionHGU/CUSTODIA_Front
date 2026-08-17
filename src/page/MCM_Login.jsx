@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 import GoogleIcon from "../assets/icon_google.svg";
 
-export default function Login() {
+export default function MCM_Login() {
   const handleSubmit = (event) => {
     event.preventDefault();
   };
