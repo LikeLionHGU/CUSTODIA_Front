@@ -2,12 +2,11 @@ import { useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
+import AsGuideModal from "../components/AsGuideModal";
+import { CHECKLIST_ITEMS, SCHEDULE_ITEMS, SERVICE_NOTICES } from "../data/asGuide";
 import chevronIcon from "../assets/icon_chevron.svg";
+import helpIcon from "../assets/icon_help.svg";
 import stepBg from "../assets/icon_step_bg.svg";
-import stepCertificate from "../assets/icon_step_certificate.svg";
-import stepCamera from "../assets/icon_step_camera.svg";
-import stepSchedule from "../assets/icon_step_schedule.svg";
-import stepPackage from "../assets/icon_step_package.svg";
 import stepConnector from "../assets/icon_step_connector.svg";
 
 const START_CARDS = [
@@ -16,6 +15,7 @@ const START_CARDS = [
     text: "아래 버튼을 눌러 제품 정보 입력을 시작하세요.",
     buttonLabel: "AS 접수 시작하기",
     to: "/product-info",
+    hasGuide: true,
   },
   {
     title: "예상 견적 먼저 확인하기",
@@ -29,47 +29,6 @@ const START_CARDS = [
     buttonLabel: "AI 상담 시작",
     to: "/pick-as",
   },
-];
-
-const CHECKLIST_ITEMS = [
-  {
-    number: "01",
-    icon: stepCertificate,
-    label: "구매 증빙",
-    desc: "구매 이력 확인에 사용됩니다. 온라인 구매는 주문번호로 대체 가능합니다.",
-  },
-  {
-    number: "02",
-    icon: stepCamera,
-    label: "제품 사진",
-    desc: "손상 유형 및 예상 견적 확인을 위해 선명한 사진을 준비해 주세요.",
-  },
-  {
-    number: "03",
-    icon: stepSchedule,
-    label: "수거 일정",
-    desc: "접수 후 픽업 예약 단계에서 날짜와 시간대를 선택합니다.",
-  },
-  {
-    number: "04",
-    icon: stepPackage,
-    label: "제품 정리",
-    desc: "제품 본체만 인계할 수 있도록 부속품과 개인 소지품을 미리 제거해 주세요.",
-  },
-];
-
-const SCHEDULE_ITEMS = [
-  { label: "접수 및 픽업 예약", value: "약 10분" },
-  { label: "AI 예상 견적 안내", value: "사진 제출 후 즉시" },
-  { label: "수선 소요 기간", value: "손상 유형에 따라 상이 (최소 2주)" },
-  { label: "최종 견적 확정", value: "실물 진단 완료 후 안내" },
-];
-
-const SERVICE_NOTICES = [
-  "CUSTODIA A/S는 정품 부자재와 공인 수선 기술을 사용합니다.",
-  "예상 견적은 참고용이며, 실물 진단 후 최종 비용이 확정됩니다.",
-  "수선 진행 상황은 리페어 패스포트에서 실시간으로 확인하실 수 있습니다.",
-  "신원 확인된 기사가 제품을 직접 수거하며, 운송 구간 전체에 보험이 적용됩니다.",
 ];
 
 const Page = styled.div`
@@ -138,11 +97,36 @@ const StartCard = styled.div`
   border-radius: 4px;
 `;
 
+const StartCardTitleRow = styled.div`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
 const StartCardTitle = styled.p`
   margin: 0;
   font-size: 16px;
   font-weight: 700;
   color: #000;
+`;
+
+const GuideButton = styled.button`
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+`;
+
+const GuideIcon = styled.img`
+  width: 18px;
+  height: 18px;
 `;
 
 const StartCardText = styled.p`
@@ -323,6 +307,7 @@ const INITIAL_OPEN_SECTIONS = {
 export default function AS_Start() {
   const navigate = useNavigate();
   const [openSections, setOpenSections] = useState(INITIAL_OPEN_SECTIONS);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const toggleSection = (key) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -337,7 +322,18 @@ export default function AS_Start() {
           <LeftColumn>
             {START_CARDS.map((card) => (
               <StartCard key={card.title}>
-                <StartCardTitle>{card.title}</StartCardTitle>
+                <StartCardTitleRow>
+                  <StartCardTitle>{card.title}</StartCardTitle>
+                  {card.hasGuide && (
+                    <GuideButton
+                      type="button"
+                      onClick={() => setGuideOpen(true)}
+                      aria-label="A/S접수 안내 열기"
+                    >
+                      <GuideIcon src={helpIcon} alt="" />
+                    </GuideButton>
+                  )}
+                </StartCardTitleRow>
                 <StartCardText>{card.text}</StartCardText>
                 <Button type="button" variant="filled" onClick={() => navigate(card.to)}>
                   {card.buttonLabel}
@@ -419,6 +415,8 @@ export default function AS_Start() {
           </RightColumn>
         </Columns>
       </Body>
+
+      <AsGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
     </Page>
   );
 }

@@ -1,105 +1,374 @@
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import Button from "../components/Button";
+import * as asCase from "../api/asCase";
+import { useApiQuery } from "../api/useApiQuery";
+import { formatKoreanDate, formatWonRange, toErrorMessage } from "../api/format";
+import StepIndicator from "../components/StepIndicator";
+import backArrow from "../assets/icon_back_arrow.svg";
+import infoIcon from "../assets/icon_info.svg";
 
-const DEFAULT_SUBMISSION = {
-  productName: "MCM 클래식 백팩 미디엄",
-  receiptNumber: "MCM-2024-008821",
-  damagePart: "핸들 및 스트랩 연결부",
-};
+const PHOTO_SLOTS = 3;
 
-const DAMAGE_ANALYSIS_ROWS = [
-  { label: "분류된 손상 유형", value: "하드웨어 마모 및 가죽 스티칭 분리" },
-  { label: "손상 정도", value: "중간 — 부분 수선 가능 수준" },
-  { label: "분석 신뢰도", value: "높음 (제출 사진 3장 기반)" },
-];
-
-const COST_ITEMS = [
-  { label: "하드웨어 교체", value: "₩ 80,000 – ₩ 120,000" },
-  { label: "스티칭 수선", value: "₩ 40,000 – ₩ 70,000" },
-];
-
-const COST_TOTAL = { label: "예상 합계", value: "₩ 120,000 – ₩ 190,000" };
-
+// API 응답에 없는 고정 안내 문구 (화면 카피)
 const COST_NOTES = [
   "수선 비용은 실제 손상 범위, 부품 수급 상황, 수선 난이도에 따라 변동될 수 있습니다.",
-  "최종 견적은 수선 센터 입고 후 실물 진단을 거쳐 별도로 안내드립니다.",
-];
-
-const WARRANTY_ROWS = [
-  { label: "구매일", value: "2023년 04월 15일" },
-  { label: "보증 기간", value: "2년 (제조 결함 한정)" },
-  { label: "보증 적용 검토 결과", value: "부분 보증 적용 가능성 있음" },
-];
-
-const WARRANTY_NOTES = [
-  "하드웨어 마모는 정상 사용에 따른 소모로 분류될 경우 보증 적용이 제한될 수 있습니다.",
-  "스티칭 분리가 제조 결함으로 확인되면 해당 항목에 한해 무상 수선이 적용될 수 있습니다.",
-  "보증 적용 여부는 입고 후 담당 수선 전문가의 실물 진단에서 최종 확정됩니다.",
+  "최종 견적은 수선 센터 입고 후 실물 진단을 거쳐 별도로 안내해 드립니다.",
 ];
 
 const FINAL_NOTES = [
-  "이 결과는 AI가 사진을 분석한 참고용 예상 견적입니다.",
-  "실물 진단 후 수선 센터에서 안내하는 최종 견적이 이 금액과 다를 수 있으며, 최종 견적 확인 후 수선 진행 여부를 결정하실 수 있습니다.",
+  "이 견적은 AI가 사진을 분석한 참고용 견적입니다.",
+  "실물 진단 후 최종 견적은 달라질 수 있으며, 최종 견적 확인 후 수선 진행 여부를 결정할 수 있습니다.",
 ];
+
+export default function AS_AiEstimate() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // 715에서 POST /asCase 로 접수한 뒤 asNo 를 들고 넘어온다 (명세 3-2)
+  const asNo = location.state?.asNo;
+
+  const { data, loading, error, reload } = useApiQuery(
+    () => (asNo ? asCase.getEstimate(asNo) : Promise.reject(new Error("접수 번호가 없습니다."))),
+    [asNo],
+  );
+
+  const [retrying, setRetrying] = useState(false);
+
+  const photoUrlList = data?.photoUrlList ?? [];
+
+  const summaryRows = [
+    { label: "제품명", value: data?.modelName ?? "—" },
+    { label: "접수 번호", value: data?.asNo ?? asNo ?? "—" },
+    { label: "손상 부위", value: data?.damagePart ?? "—" },
+  ];
+
+  const analysisRows = [
+    { label: "분류된 손상 유형", value: data?.damageCategory ?? "—" },
+    { label: "손상 정도", value: data?.damageSeverity ?? "—" },
+    {
+      label: "분석 신뢰도",
+      value: data
+        ? [data.confidenceGrade, data.confidenceNote && `(${data.confidenceNote})`]
+            .filter(Boolean)
+            .join(" ")
+        : "—",
+    },
+  ];
+
+  const warrantyRows = [
+    { label: "구매일", value: data?.purchasedAt ? formatKoreanDate(data.purchasedAt) : "—" },
+    {
+      label: "보증 기간",
+      value: data?.warrantyMonths
+        ? `${data.warrantyMonths / 12}년${data.warrantyScope ? ` (${data.warrantyScope})` : ""}`
+        : "—",
+    },
+    { label: "보증 적용 검토 결과", value: data?.warrantyVerdictLabel ?? "—" },
+  ];
+
+  // 명세 3-4: ESTIMATE_FAILED 상태에서만 재분석이 가능하다
+  const canRetry =
+    data?.status === "ESTIMATE_FAILED" ||
+    error?.code === "ESTIMATE_FAILED" ||
+    error?.status === 502;
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      await asCase.retryEstimate(asNo);
+      reload();
+    } catch {
+      // 실패 시 아래 에러 영역이 그대로 유지된다
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  const handlePickupReservation = () => {
+    navigate("/pickup-reservation", { state: { asNo: data?.asNo ?? asNo } });
+  };
+
+  return (
+    <Page>
+      <Body>
+        <BackLink type="button" onClick={() => navigate("/product-info")}>
+          <BackArrow src={backArrow} alt="" />
+          제품 정보 입력으로
+        </BackLink>
+
+        <TopRow>
+          <TopLeft>
+            <PageTitle>AI 예상 견적 결과</PageTitle>
+            <StepIndicator current={2} />
+          </TopLeft>
+
+          <Button type="button" onClick={handlePickupReservation} disabled={!data}>
+            AS 접수 시작하기
+          </Button>
+        </TopRow>
+
+        {loading && <StateBanner>견적을 불러오는 중…</StateBanner>}
+        {!loading && error && (
+          <StateBanner>
+            {toErrorMessage(error, "견적을 불러오지 못했습니다.")}
+            {canRetry && (
+              <Button type="button" onClick={handleRetry} disabled={retrying}>
+                {retrying ? "재분석 중…" : "견적 재분석"}
+              </Button>
+            )}
+          </StateBanner>
+        )}
+
+        <Columns>
+          <LeftColumn>
+            <Card>
+              <CardHeader>
+                <CardHeaderInner>제품 정보 요약</CardHeaderInner>
+              </CardHeader>
+              <CardBody>
+                <PhotoGrid>
+                  {Array.from({ length: PHOTO_SLOTS }, (_, idx) => (
+                    <PhotoSlot key={photoUrlList[idx] ?? idx}>
+                      {photoUrlList[idx] && <PhotoImg src={photoUrlList[idx]} alt="제출 사진" />}
+                    </PhotoSlot>
+                  ))}
+                </PhotoGrid>
+                <SummaryGrid>
+                  {summaryRows.map((row) => (
+                    <SummaryItem key={row.label}>
+                      <SummaryLabel>{row.label}</SummaryLabel>
+                      <SummaryValue>{row.value}</SummaryValue>
+                    </SummaryItem>
+                  ))}
+                </SummaryGrid>
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardHeaderInner>예상 수선 비용 범위</CardHeaderInner>
+              </CardHeader>
+              <CardBody>
+                <CostList>
+                  {(data?.itemList ?? []).map((item, index) => (
+                    <CostRow
+                      key={item.repairItemName}
+                      $divider={index < data.itemList.length - 1}
+                    >
+                      <CostLabel>{item.repairItemName}</CostLabel>
+                      <CostValue>{formatWonRange(item.minPrice, item.maxPrice)}</CostValue>
+                    </CostRow>
+                  ))}
+                  <CostTotalWrap>
+                    <CostTotal>
+                      <CostTotalLabel>예상 합계</CostTotalLabel>
+                      <CostTotalValue>
+                        {data ? formatWonRange(data.totalMinPrice, data.totalMaxPrice) : "—"}
+                      </CostTotalValue>
+                    </CostTotal>
+                  </CostTotalWrap>
+                </CostList>
+
+                <MutedNote>
+                  위 금액은 제출하신 사진을 기반으로 한 참고용 범위입니다. 실물 진단 결과에 따라 달라질 수 있습니다.
+                </MutedNote>
+
+                <NoteBlock>
+                  <NoteBlockTitle>비용 산정 참고 안내</NoteBlockTitle>
+                  {COST_NOTES.map((note) => (
+                    <MutedNote key={note}>{note}</MutedNote>
+                  ))}
+                </NoteBlock>
+              </CardBody>
+            </Card>
+          </LeftColumn>
+
+          <RightColumn>
+            <Card>
+              <CardHeader>
+                <CardHeaderInner>AI 손상 유형 분석</CardHeaderInner>
+              </CardHeader>
+              <CardBody $gap={0}>
+                {analysisRows.map((row, index) => (
+                  <AnalysisRow key={row.label} $last={index === analysisRows.length - 1}>
+                    <AnalysisLabel>{row.label}</AnalysisLabel>
+                    <AnalysisValue>{row.value}</AnalysisValue>
+                  </AnalysisRow>
+                ))}
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardHeaderInner>보증 적용 가능 여부</CardHeaderInner>
+              </CardHeader>
+              <CardBody>
+                <WarrantyBox>
+                  {warrantyRows.map((row) => (
+                    <WarrantyRow key={row.label}>
+                      <WarrantyLabel>{row.label}</WarrantyLabel>
+                      <WarrantyValue>{row.value}</WarrantyValue>
+                    </WarrantyRow>
+                  ))}
+                </WarrantyBox>
+                <WarrantyNoteList>
+                  {(data?.warrantyNoteList ?? []).map((note) => (
+                    <WarrantyNoteItem key={note}>{note}</WarrantyNoteItem>
+                  ))}
+                </WarrantyNoteList>
+              </CardBody>
+              <FinalNotice>
+                <FinalNoticeIcon src={infoIcon} alt="" />
+                <FinalNoticeBody>
+                  <FinalNoticeTitle>최종 견적 안내</FinalNoticeTitle>
+                  <FinalNoticeTexts>
+                    {FINAL_NOTES.map((note) => (
+                      <FinalNoticeText key={note}>{note}</FinalNoticeText>
+                    ))}
+                  </FinalNoticeTexts>
+                </FinalNoticeBody>
+              </FinalNotice>
+            </Card>
+          </RightColumn>
+        </Columns>
+      </Body>
+    </Page>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Styled Components – Figma node-id=470-5664 기준
+   ───────────────────────────────────────────── */
 
 const Page = styled.div`
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+  min-height: 100%;
+  background: #f9f9f9;
   box-sizing: border-box;
   text-align: left;
 `;
 
-const BodyRow = styled.div`
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-`;
-
 const Body = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 27px 48px 60px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 24px;
-  box-sizing: border-box;
 `;
 
-const SectionTitle = styled.p`
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
+const BackLink = styled.button`
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 23px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 10px;
+  line-height: 10px;
+  color: #919191;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:hover {
+    color: #6d707b;
+  }
+`;
+
+const BackArrow = styled.img`
+  width: 8px;
+  height: 4px;
+  transform: rotate(90deg);
 `;
 
 const TopRow = styled.div`
   width: 100%;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 24px;
+  margin-bottom: 32px;
 `;
 
-const BottomColumns = styled.div`
-  width: 100%;
+const TopLeft = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
+  align-items: center;
+  gap: 147px;
+
+  @media (max-width: 1200px) {
+    gap: 32px;
+  }
 `;
 
-const Column = styled.div`
-  flex: 1 0 260px;
+const PageTitle = styled.p`
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 22px;
+  color: #222;
+`;
+
+
+
+
+
+
+
+
+
+
+const StateBanner = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding: 16px 24px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 13px;
+  line-height: 19.5px;
+  color: #313131;
+`;
+
+const Columns = styled.div`
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 40px;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+`;
+
+const LeftColumn = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 32px;
+`;
+
+const RightColumn = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 `;
 
 const Card = styled.div`
@@ -107,300 +376,356 @@ const Card = styled.div`
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  align-items: flex-start;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
 `;
 
-const CardTitle = styled.p`
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
+const CardHeader = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 24px;
 `;
 
-const CardSubTitle = styled.p`
+const CardHeaderInner = styled.p`
+  width: 100%;
   margin: 0;
-  font-size: 12px;
-  color: #1f2937;
+  padding: 20px 0;
+  border-bottom: 1px solid #ededed;
+  box-sizing: border-box;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #222;
 `;
 
-const CardNote = styled.p`
-  margin: 0;
-  font-size: 11px;
-  color: #1f2937;
+const CardBody = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: ${(props) => props.$gap ?? 20}px;
+  padding: 24px;
 `;
+
+/* ── 제품 정보 요약 카드 ── */
 
 const PhotoGrid = styled.div`
   width: 100%;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
 `;
 
 const PhotoSlot = styled.div`
-  width: 100%;
-  height: 96px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f9fafb;
-  border: 1px dashed #d1d5db;
-  border-radius: 6px;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 0;
+  padding-bottom: 46%;
+  position: relative;
   overflow: hidden;
-  font-size: 11px;
-  color: #9ca3af;
+  background: #ededed;
+  border-radius: 8px;
 `;
 
 const PhotoImg = styled.img`
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 `;
 
 const SummaryGrid = styled.div`
   width: 100%;
+  box-sizing: border-box;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px 16px;
+  align-items: flex-start;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #ededed;
 `;
 
 const SummaryItem = styled.div`
-  flex: 1 0 120px;
+  flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 `;
 
 const SummaryLabel = styled.p`
   margin: 0;
-  font-size: 11px;
-  color: #1f2937;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 15px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #919191;
 `;
 
 const SummaryValue = styled.p`
   margin: 0;
-  font-size: 12px;
-  color: #1f2937;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 19.5px;
+  color: #222;
 `;
 
-const InfoRows = styled.div`
+/* ── 예상 수선 비용 범위 카드 ── */
+
+const CostList = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-`;
-
-const InfoRow = styled.div`
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-`;
-
-const InfoLabel = styled.span`
-  font-size: 11px;
-  color: #1f2937;
-`;
-
-const InfoValue = styled.span`
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const CostRows = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 `;
 
 const CostRow = styled.div`
   width: 100%;
+  box-sizing: border-box;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  font-size: 12px;
-  color: #1f2937;
-
-  ${(props) => props.$bold && "font-weight: 700;"}
+  gap: 8px;
+  padding: 14px 0;
+  border-bottom: ${(props) => (props.$divider ? "1px solid #ededed" : "none")};
 `;
 
-const NoteList = styled.div`
+const CostLabel = styled.p`
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 13px;
+  line-height: 19.5px;
+  color: #222;
+`;
+
+const CostValue = styled.p`
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 19.5px;
+  color: #222;
+`;
+
+const CostTotalWrap = styled.div`
   width: 100%;
+  padding-top: 8px;
+`;
+
+const CostTotal = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 12px;
+  background: #f0f0f0;
+  border-radius: 4px;
+`;
+
+const CostTotalLabel = styled.p`
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #222;
+`;
+
+const CostTotalValue = styled.p`
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 1px;
+  color: #222;
+`;
+
+const MutedNote = styled.p`
+  width: 100%;
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 11px;
+  line-height: 17.875px;
+  color: #919191;
+`;
+
+const NoteBlock = styled.div`
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #ededed;
 `;
 
-const BottomRow = styled.div`
+const NoteBlockTitle = styled.p`
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16.5px;
+  letter-spacing: 0.88px;
+  color: #222;
+`;
+
+/* ── AI 손상 유형 분석 카드 ── */
+
+const AnalysisRow = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 0;
+  border-bottom: ${(props) => (props.$last ? "none" : "1px solid #ededed")};
+`;
+
+const AnalysisLabel = styled.p`
+  flex-shrink: 0;
+  width: 120px;
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: 0.48px;
+  color: #919191;
+`;
+
+const AnalysisValue = styled.p`
+  min-width: 0;
+  flex: 1;
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  color: #222;
+`;
+
+/* ── 보증 적용 가능 여부 카드 ── */
+
+const WarrantyBox = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+`;
+
+const WarrantyRow = styled.div`
   width: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
+  gap: 16px;
 `;
 
-const Button = styled.button`
-  min-width: 60px;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
+const WarrantyLabel = styled.p`
+  flex-shrink: 0;
+  width: 120px;
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 11px;
+  line-height: 16.5px;
+  color: #919191;
+`;
+
+const WarrantyValue = styled.p`
+  min-width: 0;
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 12px;
   font-weight: 500;
-  cursor: pointer;
-  border: none;
-  background: #1f2937;
+  line-height: 18px;
+  color: #222;
+`;
+
+const WarrantyNoteList = styled.ul`
+  width: 100%;
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: disc;
+`;
+
+const WarrantyNoteItem = styled.li`
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 12px;
+  line-height: 19.5px;
+  color: #c4c4c4;
+`;
+
+/* ── 최종 견적 안내 (다크 푸터) ── */
+
+const FinalNotice = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 24px;
+  background: #313131;
+`;
+
+const FinalNoticeIcon = styled.img`
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+`;
+
+const FinalNoticeBody = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+`;
+
+const FinalNoticeTitle = styled.p`
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 12px;
   color: #fff;
 `;
 
-export default function AS_AiEstimate() {
-  const navigate = useNavigate();
-  const location = useLocation();
+const FinalNoticeTexts = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 12px;
+`;
 
-  const photos = location.state?.photos || [];
-  const formData = location.state?.formData;
-
-  const submission = {
-    productName: formData?.modelName || DEFAULT_SUBMISSION.productName,
-    receiptNumber: formData?.warrantyNumber || DEFAULT_SUBMISSION.receiptNumber,
-    damagePart: formData?.damagePart || DEFAULT_SUBMISSION.damagePart,
-  };
-
-  const handlePickupReservation = () => {
-    navigate("/pickup-reservation", {
-      state: {
-        receiptInfo: {
-          productName: submission.productName,
-          receiptNumber: submission.receiptNumber,
-          status: "견적 안내 완료",
-        },
-      },
-    });
-  };
-
-  return (
-    <Page>
-      <BodyRow>
-        <Body>
-          <SectionTitle>AI 예상 견적 결과</SectionTitle>
-
-          <TopRow>
-            <Column>
-              <Card>
-                <CardSubTitle>제출 정보 요약</CardSubTitle>
-                <PhotoGrid>
-                  {[0, 1, 2].map((idx) =>
-                    photos[idx] ? (
-                      <PhotoSlot key={photos[idx].id}>
-                        <PhotoImg src={photos[idx].url} alt="제출 사진" />
-                      </PhotoSlot>
-                    ) : (
-                      <PhotoSlot key={idx}>Image</PhotoSlot>
-                    ),
-                  )}
-                </PhotoGrid>
-                <SummaryGrid>
-                  <SummaryItem>
-                    <SummaryLabel>제품명</SummaryLabel>
-                    <SummaryValue>{submission.productName}</SummaryValue>
-                  </SummaryItem>
-                  <SummaryItem>
-                    <SummaryLabel>접수 번호</SummaryLabel>
-                    <SummaryValue>{submission.receiptNumber}</SummaryValue>
-                  </SummaryItem>
-                  <SummaryItem>
-                    <SummaryLabel>손상 부위</SummaryLabel>
-                    <SummaryValue>{submission.damagePart}</SummaryValue>
-                  </SummaryItem>
-                </SummaryGrid>
-              </Card>
-            </Column>
-
-            <Column>
-              <Card>
-                <CardSubTitle>AI 손상 유형 분석</CardSubTitle>
-                <InfoRows>
-                  {DAMAGE_ANALYSIS_ROWS.map((row) => (
-                    <InfoRow key={row.label}>
-                      <InfoLabel>{row.label}</InfoLabel>
-                      <InfoValue>{row.value}</InfoValue>
-                    </InfoRow>
-                  ))}
-                </InfoRows>
-              </Card>
-            </Column>
-          </TopRow>
-
-          <BottomColumns>
-            <Column>
-              <Card>
-                <CardTitle>예상 수선 비용 범위</CardTitle>
-                <CostRows>
-                  {COST_ITEMS.map((item) => (
-                    <CostRow key={item.label}>
-                      <span>{item.label}</span>
-                      <span>{item.value}</span>
-                    </CostRow>
-                  ))}
-                  <CostRow $bold>
-                    <span>{COST_TOTAL.label}</span>
-                    <span>{COST_TOTAL.value}</span>
-                  </CostRow>
-                </CostRows>
-                <CardNote>
-                  위 금액은 제출하신 사진을 기반으로 한 참고용 범위입니다. 실물 진단 결과에 따라 달라질 수
-                  있습니다.
-                </CardNote>
-              </Card>
-
-              <Card>
-                <CardSubTitle>비용 산정 참고 안내</CardSubTitle>
-                <NoteList>
-                  {COST_NOTES.map((note) => (
-                    <CardNote key={note}>{note}</CardNote>
-                  ))}
-                </NoteList>
-              </Card>
-            </Column>
-
-            <Column>
-              <Card>
-                <CardTitle>보증 적용 가능 여부</CardTitle>
-                <InfoRows>
-                  {WARRANTY_ROWS.map((row) => (
-                    <InfoRow key={row.label}>
-                      <InfoLabel>{row.label}</InfoLabel>
-                      <InfoValue>{row.value}</InfoValue>
-                    </InfoRow>
-                  ))}
-                </InfoRows>
-                {WARRANTY_NOTES.map((note) => (
-                  <CardNote key={note}>{note}</CardNote>
-                ))}
-              </Card>
-
-              <Card>
-                <CardSubTitle>최종 견적 안내</CardSubTitle>
-                {FINAL_NOTES.map((note) => (
-                  <CardNote key={note}>{note}</CardNote>
-                ))}
-              </Card>
-            </Column>
-          </BottomColumns>
-
-          <BottomRow>
-            <Button type="button" onClick={handlePickupReservation}>
-              픽업 예약하기
-            </Button>
-          </BottomRow>
-        </Body>
-      </BodyRow>
-    </Page>
-  );
-}
+const FinalNoticeText = styled.p`
+  margin: 0;
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 11px;
+  line-height: 17.875px;
+  color: rgba(255, 255, 255, 0.5);
+`;

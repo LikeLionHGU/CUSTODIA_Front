@@ -1,41 +1,132 @@
+import { useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
+import AsGuideModal from "../components/AsGuideModal";
+import helpIcon from "../assets/icon_help.svg";
+import * as member from "../api/member";
+import { useApiQuery } from "../api/useApiQuery";
+import { formatKoreanDate, toErrorMessage } from "../api/format";
 
-const MAX_VISIBLE_AS_ITEMS = 5;
+// 명세 부록 B: PICKUP_BOOKED 라벨의 뒷부분("수거 대기 중")을 강조색으로 표시한다
+const HIGHLIGHT_BY_STATUS = { PICKUP_BOOKED: "수거 대기 중" };
 
-// TODO: 백엔드 연동 시 이 목록을 API 응답으로 교체
-const AS_ITEMS = [
-  {
-    id: "AS-2024-00312",
-    productName: "MCM 클래식 백팩",
-    status: "수선 진행 중 · 예상 완료 2025년 8월 4일",
-  },
-  {
-    id: "AS-2024-00298",
-    productName: "MCM 스타크 지갑",
-    status: "검수 완료 · 예상 완료 2025년 7월 30일",
-  },
-  {
-    id: "AS-2024-00271",
-    productName: "MCM 미니 크로스백",
-    status: "픽업 예약 완료 · 수거 대기 중",
-    highlight: "수거 대기 중",
-  },
-];
+/** 명세 1-3: 완료 건은 expectedCompletedAt 대신 completedAt 을 표시한다 */
+function buildStatusText(item) {
+  if (item.completedAt) return `${item.statusLabel} · 완료 ${formatKoreanDate(item.completedAt)}`;
+  if (item.expectedCompletedAt) {
+    return `${item.statusLabel} · 예상 완료 ${formatKoreanDate(item.expectedCompletedAt)}`;
+  }
+  return item.statusLabel;
+}
 
 function renderAsItemStatus(item) {
-  if (!item.highlight) return item.status;
+  const text = buildStatusText(item);
+  const highlight = HIGHLIGHT_BY_STATUS[item.status];
+  const highlightIndex = highlight ? text.indexOf(highlight) : -1;
+  if (highlightIndex === -1) return text;
 
-  const highlightIndex = item.status.indexOf(item.highlight);
-  if (highlightIndex === -1) return item.status;
-
-  const prefix = item.status.slice(0, highlightIndex);
   return (
     <>
-      {prefix}
-      <AsItemHighlight>{item.highlight}</AsItemHighlight>
+      {text.slice(0, highlightIndex)}
+      <AsItemHighlight>{highlight}</AsItemHighlight>
     </>
+  );
+}
+
+export default function MCM_Home() {
+  const navigate = useNavigate();
+  const [guideOpen, setGuideOpen] = useState(false);
+
+  // 명세 1-3: 서버가 최대 5건·최신순으로 잘라서 준다
+  const { data, loading, error } = useApiQuery(() => member.getHome(), []);
+  const asCaseList = data?.asCaseList ?? [];
+
+  const handleAsDetail = (item) => {
+    navigate("/my-as-detail", { state: { asNo: item.asNo } });
+  };
+
+  return (
+    <Page>
+      <Body>
+        <Columns>
+          <LeftColumn>
+            <Hero>
+              <HeroTitle>CUSTODIA 케어</HeroTitle>
+              <HeroDescription>
+                고가 제품을 안심하고 맡기세요. 수선 접수부터 완료까지 모든 과정을 투명하게 안내합니다.
+              </HeroDescription>
+            </Hero>
+
+            <AsListSection>
+              <AsList>
+                {loading && <EmptyAsList>불러오는 중…</EmptyAsList>}
+                {!loading && error && <EmptyAsList>{toErrorMessage(error)}</EmptyAsList>}
+                {!loading && !error && asCaseList.length === 0 && (
+                  <EmptyAsList>아직 AS 내역이 없어요.</EmptyAsList>
+                )}
+                {!loading &&
+                  !error &&
+                  asCaseList.map((item) => (
+                    <AsItem key={item.asNo}>
+                      <AsItemInfo>
+                        <AsItemName>
+                          {item.modelName} · {item.asNo}
+                        </AsItemName>
+                        <AsItemStatus>{renderAsItemStatus(item)}</AsItemStatus>
+                      </AsItemInfo>
+                      <DetailButton variant="stroke" onClick={() => handleAsDetail(item)}>
+                        상세보기
+                      </DetailButton>
+                    </AsItem>
+                  ))}
+              </AsList>
+              <ViewAllLink type="button" onClick={() => navigate("/my-as-list")}>
+                전체 접수 내역 보기
+              </ViewAllLink>
+            </AsListSection>
+          </LeftColumn>
+
+          <RightColumn>
+            <InfoCard>
+              <InfoCardBody>
+                <InfoCardTitleRow>
+                  <InfoCardTitle>접수 시작</InfoCardTitle>
+                  <GuideButton
+                    type="button"
+                    onClick={() => setGuideOpen(true)}
+                    aria-label="A/S접수 안내 열기"
+                  >
+                    <GuideIcon src={helpIcon} alt="" />
+                  </GuideButton>
+                </InfoCardTitleRow>
+                <InfoCardText>아래 버튼을 눌러 제품 정보 입력을 시작하세요.</InfoCardText>
+              </InfoCardBody>
+              <Button variant="filled" onClick={() => navigate("/product-info")}>
+                AS 접수 시작하기
+              </Button>
+            </InfoCard>
+
+            <InfoCard>
+              <InfoCardBody>
+                <InfoCardTitle>AI 컨시어지 &amp; 상담원 연결</InfoCardTitle>
+                <div>
+                  <InfoCardText>
+                    고가 제품을 안심하고 맡기세요. 수선 접수부터 완료까지 모든 과정을 투명하게 안내합니다.
+                  </InfoCardText>
+                  <InfoCardText>최종 수선 판단 및 비용 확정은 실물 진단 후 상담원이 안내합니다.</InfoCardText>
+                </div>
+              </InfoCardBody>
+              <Button variant="filled" onClick={() => navigate("/pick-as")}>
+                상담하기
+              </Button>
+            </InfoCard>
+          </RightColumn>
+        </Columns>
+      </Body>
+
+      <AsGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
+    </Page>
   );
 }
 
@@ -49,30 +140,24 @@ const Page = styled.div`
   text-align: left;
 `;
 
-const BodyRow = styled.div`
+const Body = styled.div`
   width: 100%;
   display: flex;
-  align-items: flex-start;
-`;
-
-const Body = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
-  display: flex;
   flex-direction: column;
-  padding: 52px 48px;
+  padding: 60px 48px;
   box-sizing: border-box;
 `;
 
 const Columns = styled.div`
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 639fr) minmax(320px, 660fr);
   align-items: start;
-  gap: 48px;
+  gap: 45px;
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
+    gap: 32px;
   }
 `;
 
@@ -81,7 +166,7 @@ const LeftColumn = styled.div`
   display: flex;
   flex-direction: column;
   gap: 52px;
-  padding: 32px 0;
+  padding-bottom: 32px;
 `;
 
 const RightColumn = styled.div`
@@ -101,7 +186,7 @@ const Hero = styled.div`
 
 const HeroTitle = styled.p`
   margin: 0;
-  font-size: 16px;
+  font-size: 22px;
   font-weight: 700;
   color: #222;
 `;
@@ -110,6 +195,7 @@ const HeroDescription = styled.p`
   margin: 0;
   font-size: 16px;
   font-weight: 400;
+  line-height: 16px;
   color: #222;
 `;
 
@@ -154,6 +240,7 @@ const AsItemName = styled.p`
   margin: 0;
   font-size: 14px;
   font-weight: 700;
+  line-height: 14px;
   letter-spacing: 1px;
   color: #222;
 `;
@@ -161,11 +248,17 @@ const AsItemName = styled.p`
 const AsItemStatus = styled.p`
   margin: 0;
   font-size: 14px;
+  line-height: 14px;
   color: #313131;
 `;
 
 const AsItemHighlight = styled.span`
   color: #fb4103;
+`;
+
+const DetailButton = styled(Button)`
+  width: 121px;
+  background: #fff;
 `;
 
 const EmptyAsList = styled.p`
@@ -186,6 +279,7 @@ const ViewAllLink = styled.button`
   background: none;
   padding: 4px 0;
   font-size: 14px;
+  line-height: 14px;
   color: #313131;
   cursor: pointer;
 `;
@@ -199,13 +293,30 @@ const InfoCard = styled.div`
   gap: 20px;
   padding: 32px;
   background: #f0f0f0;
+  border: 1px solid #d1d5db;
   border-radius: 4px;
+`;
+
+const InfoCardBody = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+`;
+
+const InfoCardTitleRow = styled.div`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 `;
 
 const InfoCardTitle = styled.p`
   margin: 0;
   font-size: 16px;
   font-weight: 700;
+  line-height: 16px;
   color: #222;
 `;
 
@@ -216,108 +327,20 @@ const InfoCardText = styled.p`
   color: #222;
 `;
 
-const UploadBox = styled.div`
-  width: 100%;
-  height: 300px;
-  box-sizing: border-box;
+const GuideButton = styled.button`
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
-  border: 1px dashed #313131;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #313131;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
 `;
 
-const FullWidthButton = styled(Button)`
-  width: 100%;
+const GuideIcon = styled.img`
+  width: 18px;
+  height: 18px;
 `;
-
-export default function MCM_Home() {
-  const navigate = useNavigate();
-  const visibleAsItems = AS_ITEMS.slice(0, MAX_VISIBLE_AS_ITEMS);
-
-  const handleAsDetail = (item) => {
-    navigate("/my-as-detail", {
-      state: { asCase: { id: item.id, productName: item.productName, status: item.status } },
-    });
-  };
-
-  return (
-    <Page>
-      <BodyRow>
-        <Body>
-          <Columns>
-            <LeftColumn>
-              <Hero>
-                <HeroTitle>CUSTODIA 케어</HeroTitle>
-                <HeroDescription>
-                  고가 제품을 안심하고 맡기세요. 수선 접수부터 완료까지 모든 과정을 투명하게 안내합니다.
-                </HeroDescription>
-                <Button variant="filled" onClick={() => navigate("/as-start")}>
-                  AS 접수 시작
-                </Button>
-              </Hero>
-
-              <AsListSection>
-                <AsList>
-                  {visibleAsItems.length === 0 ? (
-                    <EmptyAsList>아직 AS 내역이 없어요</EmptyAsList>
-                  ) : (
-                    visibleAsItems.map((item) => (
-                      <AsItem key={item.id}>
-                        <AsItemInfo>
-                          <AsItemName>
-                            {item.productName} · {item.id}
-                          </AsItemName>
-                          <AsItemStatus>{renderAsItemStatus(item)}</AsItemStatus>
-                        </AsItemInfo>
-                        <Button variant="stroke" onClick={() => handleAsDetail(item)}>
-                          상세보기
-                        </Button>
-                      </AsItem>
-                    ))
-                  )}
-                </AsList>
-                <ViewAllLink type="button" onClick={() => navigate("/my-as-list")}>
-                  전체 접수 내역 보기
-                </ViewAllLink>
-              </AsListSection>
-            </LeftColumn>
-
-            <RightColumn>
-              <InfoCard>
-                <InfoCardTitle>AI 컨시어지 & 상담원 연결</InfoCardTitle>
-                <div>
-                  <InfoCardText>
-                    고가 제품을 안심하고 맡기세요. 수선 접수부터 완료까지 모든 과정을 투명하게 안내합니다.
-                  </InfoCardText>
-                  <InfoCardText>최종 수선 판단 및 비용 확정은 실물 진단 후 상담원이 안내합니다.</InfoCardText>
-                </div>
-                <Button variant="filled" onClick={() => navigate("/pick-as")}>
-                  기존 AS 건 상담하기
-                </Button>
-              </InfoCard>
-
-              <InfoCard>
-                <InfoCardTitle>사진 기반 예상 견적</InfoCardTitle>
-                <UploadBox>Image</UploadBox>
-                <div>
-                  <InfoCardText>
-                    고가 제품을 안심하고 맡기세요. 수선 접수부터 완료까지 모든 과정을 투명하게 안내합니다.
-                  </InfoCardText>
-                  <InfoCardText>최종 수선 판단 및 비용 확정은 실물 진단 후 상담원이 안내합니다.</InfoCardText>
-                </div>
-                <FullWidthButton variant="filled" onClick={() => navigate("/product-info")}>
-                  예상 견적 확인하기
-                </FullWidthButton>
-              </InfoCard>
-            </RightColumn>
-          </Columns>
-        </Body>
-      </BodyRow>
-    </Page>
-  );
-}

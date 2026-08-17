@@ -1,5 +1,9 @@
+import { useState } from "react";
 import styled from "styled-components";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+
+import * as member from "../api/member";
+import { ApiError } from "../api/client";
 
 const fields = [
   { id: "email", label: "이메일*", type: "email", autoComplete: "email" },
@@ -10,13 +14,64 @@ const fields = [
     autoComplete: "new-password",
   },
   { id: "name", label: "이름*", type: "text", autoComplete: "name" },
-  { id: "birthdate", label: "생년월일*", type: "text", autoComplete: "bday" },
+  { id: "birthDate", label: "생년월일*", type: "date", autoComplete: "bday" },
   { id: "phone", label: "연락처*", type: "tel", autoComplete: "tel" },
 ];
 
+const INITIAL_FORM = { email: "", password: "", name: "", birthDate: "", phone: "" };
+
+// 명세 부록 C 기준 에러 메시지
+const ERROR_MESSAGES = {
+  EMAIL_DUPLICATED: "이미 가입된 이메일입니다.",
+  PASSWORD_MISMATCH: "비밀번호가 일치하지 않습니다.",
+  FUTURE_BIRTH_DATE: "생년월일은 오늘 이전 날짜여야 합니다.",
+  AGREEMENT_REQUIRED: "필수 약관에 동의해 주세요.",
+  VALIDATION_FAILED: "입력값을 다시 확인해 주세요.",
+};
+
 export default function MCM_Signup() {
-  const handleSubmit = (event) => {
+  const navigate = useNavigate();
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [agreements, setAgreements] = useState({
+    agreedService: true,
+    agreedPrivacy: true,
+    agreedMarketing: false,
+  });
+  const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleChange = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
+
+  const handleAgreementChange = (key) => (e) =>
+    setAgreements((prev) => ({ ...prev, [key]: e.target.checked }));
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    if (submitting) return;
+
+    if (!agreements.agreedService || !agreements.agreedPrivacy) {
+      setError(ERROR_MESSAGES.AGREEMENT_REQUIRED);
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await member.signup({
+        ...form,
+        // 디자인에 비밀번호 확인 입력란이 없어 password 를 그대로 넣는다 (아래 주석 참고)
+        passwordConfirm: form.password,
+        phone: form.phone.replace(/\D/g, ""),
+        ...agreements,
+      });
+      navigate("/login");
+    } catch (err) {
+      const code = err instanceof ApiError ? err.code : null;
+      setError(ERROR_MESSAGES[code] || err.message || "회원가입에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -34,6 +89,8 @@ export default function MCM_Signup() {
                   type={field.type}
                   placeholder=" "
                   autoComplete={field.autoComplete}
+                  value={form[field.id]}
+                  onChange={handleChange(field.id)}
                 />
                 <Label htmlFor={field.id}>{field.label}</Label>
               </Field>
@@ -42,20 +99,35 @@ export default function MCM_Signup() {
 
           <Agreements>
             <Agreement>
-              <Checkbox type="checkbox" defaultChecked />
+              <Checkbox
+                type="checkbox"
+                checked={agreements.agreedService}
+                onChange={handleAgreementChange("agreedService")}
+              />
               <span>이용약관 동의 (필수)</span>
             </Agreement>
             <Agreement>
-              <Checkbox type="checkbox" defaultChecked />
+              <Checkbox
+                type="checkbox"
+                checked={agreements.agreedPrivacy}
+                onChange={handleAgreementChange("agreedPrivacy")}
+              />
               <span>개인정보 수집·이용 동의 (필수)</span>
             </Agreement>
             <Agreement>
-              <Checkbox type="checkbox" />
+              <Checkbox
+                type="checkbox"
+                checked={agreements.agreedMarketing}
+                onChange={handleAgreementChange("agreedMarketing")}
+              />
               <span>마케팅 정보 수신 동의 (선택)</span>
             </Agreement>
           </Agreements>
 
-          <SubmitButton type="submit">회원가입</SubmitButton>
+          {error && <ErrorText role="alert">{error}</ErrorText>}
+          <SubmitButton type="submit" disabled={submitting}>
+            {submitting ? "가입 중…" : "회원가입"}
+          </SubmitButton>
         </Form>
 
         <LoginGuide>
@@ -155,6 +227,13 @@ const Checkbox = styled.input`
   accent-color: #6e5e62;
 `;
 
+const ErrorText = styled.p`
+  margin: 0 0 12px;
+  color: #c0392b;
+  font-size: 12px;
+  line-height: 18px;
+`;
+
 const SubmitButton = styled.button`
   width: 100%;
   height: 48px;
@@ -165,6 +244,11 @@ const SubmitButton = styled.button`
 
   &:hover {
     background: #452425;
+  }
+
+  &:disabled {
+    background: #9b8d8e;
+    cursor: default;
   }
 `;
 

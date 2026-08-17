@@ -1,11 +1,38 @@
+import { useState } from "react";
 import styled from "styled-components";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import GoogleIcon from "../assets/icon_google.svg";
+import * as member from "../api/member";
 
 export default function MCM_Login() {
-  const handleSubmit = (event) => {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleChange = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    if (submitting) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await member.login(form);
+      navigate("/");
+    } catch (err) {
+      // 명세 1-2: 이메일·비밀번호 오류를 구분하지 않고 401 INVALID_CREDENTIALS
+      setError(
+        err.code === "INVALID_CREDENTIALS"
+          ? "이메일 또는 비밀번호가 올바르지 않습니다."
+          : err.message || "로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -26,6 +53,8 @@ export default function MCM_Login() {
               type="email"
               placeholder=" "
               autoComplete="email"
+              value={form.email}
+              onChange={handleChange("email")}
             />
             <Label htmlFor="email">이메일*</Label>
           </Field>
@@ -36,10 +65,15 @@ export default function MCM_Login() {
               type="password"
               placeholder=" "
               autoComplete="current-password"
+              value={form.password}
+              onChange={handleChange("password")}
             />
             <Label htmlFor="password">비밀번호*</Label>
           </Field>
-          <LoginButton type="submit">로그인</LoginButton>
+          {error && <ErrorText role="alert">{error}</ErrorText>}
+          <LoginButton type="submit" disabled={submitting}>
+            {submitting ? "로그인 중…" : "로그인"}
+          </LoginButton>
         </Form>
 
         <Divider><span>또는</span></Divider>
@@ -133,6 +167,13 @@ const Input = styled.input`
   }
 `;
 
+const ErrorText = styled.p`
+  margin: 12px 0 0;
+  color: #c0392b;
+  font-size: 12px;
+  line-height: 18px;
+`;
+
 const LoginButton = styled.button`
   width: 100%;
   height: 48px;
@@ -145,6 +186,11 @@ const LoginButton = styled.button`
 
   &:hover {
     background: #452425;
+  }
+
+  &:disabled {
+    background: #9b8d8e;
+    cursor: default;
   }
 `;
 

@@ -18,8 +18,8 @@ const StyledButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: ${(props) => (props.$size === "big" ? "16px 32px" : "14px 32px")};
-  border-radius: 2px;
+  padding: ${(props) => (props.$size === "big" ? "16px 32px" : "12px 24px")};
+  border-radius: 4px;
   font-family: "Noto Sans KR", "Pretendard", sans-serif;
   font-size: 12px;
   font-weight: 700;
@@ -48,6 +48,11 @@ const StyledButton = styled.button`
 
           &:hover {
             background: #6d707b;
+          }
+
+          &:disabled {
+            background: #c4c4c4;
+            cursor: default;
           }
         `}
 `;

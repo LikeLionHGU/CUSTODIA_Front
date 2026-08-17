@@ -1,67 +1,16 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import * as asCase from "../api/asCase";
+import { useApiQuery } from "../api/useApiQuery";
+import { formatDotDate, toErrorMessage } from "../api/format";
 
-const AS_CASES = [
-  {
-    id: "AS-2025-00341",
-    productName: "MCM 클래식 백팩 (블랙)",
-    receivedDate: "2025.06.02",
-    status: "수선 중",
-    group: "진행중",
-    expectedLabel: "예상 완료",
-    expectedDate: "2025.07.20",
-    updatedDate: "2025.07.14",
-  },
-  {
-    id: "AS-2025-00287",
-    productName: "MCM 스타크 숄더백 (코냑)",
-    receivedDate: "2025.05.18",
-    status: "검수 중",
-    group: "진행중",
-    expectedLabel: "예상 완료",
-    expectedDate: "2025.07.16",
-    updatedDate: "2025.07.13",
-  },
-  {
-    id: "AS-2025-00194",
-    productName: "MCM 비세토스 토트백 (베이지)",
-    receivedDate: "2025.04.07",
-    status: "접수 완료",
-    group: "진행중",
-    expectedLabel: "예상 완료",
-    expectedDate: "2025.08.01",
-    updatedDate: "2025.07.10",
-  },
-  {
-    id: "AS-2024-01823",
-    productName: "MCM 로엔 카메라백 (실버)",
-    receivedDate: "2024.11.22",
-    status: "완료",
-    group: "완료",
-    expectedLabel: "완료일",
-    expectedDate: "2025.01.08",
-    updatedDate: "2025.01.08",
-  },
-  {
-    id: "AS-2024-01540",
-    productName: "MCM 클래식 지갑 (레드)",
-    receivedDate: "2024.09.03",
-    status: "완료",
-    group: "완료",
-    expectedLabel: "완료일",
-    expectedDate: "2024.10.15",
-    updatedDate: "2024.10.15",
-  },
+// 명세 3-5: filter 는 ALL · IN_PROGRESS · COMPLETED
+const FILTERS = [
+  { label: "진행중", value: "IN_PROGRESS" },
+  { label: "완료", value: "COMPLETED" },
+  { label: "전체", value: "ALL" },
 ];
-
-const FILTERS = ["진행중", "완료", "전체"];
-
-const SUMMARY = {
-  inProgressCount: "3건",
-  completedCount: "12건",
-  lastUpdated: "2025.07.14",
-};
 
 const Page = styled.div`
   width: 100%;
@@ -282,15 +231,13 @@ const Button = styled.button`
 
 export default function AS_MyList() {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState("전체");
+  const [filter, setFilter] = useState("ALL");
 
-  const filteredCases = useMemo(() => {
-    if (filter === "전체") return AS_CASES;
-    return AS_CASES.filter((item) => item.group === filter);
-  }, [filter]);
+  const { data, loading, error } = useApiQuery(() => asCase.getList({ filter }), [filter]);
+  const itemList = data?.itemList ?? [];
 
-  const handleCaseClick = (asCase) => {
-    navigate("/my-as-detail", { state: { asCase } });
+  const handleCaseClick = (item) => {
+    navigate("/my-as-detail", { state: { asNo: item.asNo } });
   };
 
   const handleAsStart = () => {
@@ -304,9 +251,14 @@ export default function AS_MyList() {
           <TitleRow>
             <SectionTitle>리페어 패스포트</SectionTitle>
             <Spacer />
-            {FILTERS.map((label) => (
-              <Chip key={label} type="button" $selected={filter === label} onClick={() => setFilter(label)}>
-                {label}
+            {FILTERS.map((item) => (
+              <Chip
+                key={item.value}
+                type="button"
+                $selected={filter === item.value}
+                onClick={() => setFilter(item.value)}
+              >
+                {item.label}
               </Chip>
             ))}
           </TitleRow>
@@ -316,44 +268,59 @@ export default function AS_MyList() {
             <SummaryGrid>
               <SummaryItem>
                 <SummaryLabel>진행 중</SummaryLabel>
-                <SummaryValue>{SUMMARY.inProgressCount}</SummaryValue>
+                <SummaryValue>{data ? `${data.inProgressCount}건` : "—"}</SummaryValue>
               </SummaryItem>
               <SummaryItem>
                 <SummaryLabel>완료</SummaryLabel>
-                <SummaryValue>{SUMMARY.completedCount}</SummaryValue>
+                <SummaryValue>{data ? `${data.completedCount}건` : "—"}</SummaryValue>
               </SummaryItem>
               <SummaryItem>
                 <SummaryLabel>최근 갱신</SummaryLabel>
-                <SummaryValueSmall>{SUMMARY.lastUpdated}</SummaryValueSmall>
+                <SummaryValueSmall>
+                  {data?.lastUpdatedAt ? formatDotDate(data.lastUpdatedAt) : "—"}
+                </SummaryValueSmall>
               </SummaryItem>
             </SummaryGrid>
           </Card>
 
           <ListTitle>접수 건 목록</ListTitle>
 
-          {filteredCases.map((item) => (
-            <CaseCard key={item.id} type="button" onClick={() => handleCaseClick(item)}>
+          {itemList.map((item) => (
+            <CaseCard key={item.asNo} type="button" onClick={() => handleCaseClick(item)}>
               <CaseRow>
                 <CaseInfo>
-                  <CaseId>{item.id}</CaseId>
-                  <CaseName>{item.productName}</CaseName>
-                  <CaseDate>접수일 {item.receivedDate}</CaseDate>
+                  <CaseId>{item.asNo}</CaseId>
+                  <CaseName>{item.modelName}</CaseName>
+                  <CaseDate>접수일 {formatDotDate(item.createdAt)}</CaseDate>
                 </CaseInfo>
                 <Spacer />
                 <CaseStatusCol>
                   <Chip as="span" $selected={false}>
-                    {item.status}
+                    {item.statusLabel}
                   </Chip>
+                  {/* 명세 3-5: 진행 중은 expectedCompletedAt, 완료는 completedAt */}
                   <CaseDate>
-                    {item.expectedLabel} {item.expectedDate}
+                    {item.completedAt
+                      ? `완료일 ${formatDotDate(item.completedAt)}`
+                      : item.expectedCompletedAt
+                        ? `예상 완료 ${formatDotDate(item.expectedCompletedAt)}`
+                        : ""}
                   </CaseDate>
-                  <CaseDate>최근 갱신 {item.updatedDate}</CaseDate>
+                  <CaseDate>최근 갱신 {formatDotDate(item.statusUpdatedAt)}</CaseDate>
                 </CaseStatusCol>
               </CaseRow>
             </CaseCard>
           ))}
 
-          {filteredCases.length === 0 && (
+          {loading && <EmptyCard><EmptyText>불러오는 중…</EmptyText></EmptyCard>}
+
+          {!loading && error && (
+            <EmptyCard>
+              <EmptyText>{toErrorMessage(error)}</EmptyText>
+            </EmptyCard>
+          )}
+
+          {!loading && !error && itemList.length === 0 && (
             <EmptyCard>
               <EmptyText>접수 건이 없습니다</EmptyText>
               <EmptyNote>AS 접수를 완료하면 리페어 패스포트에서 진행 상황을 실시간으로 확인하실 수 있습니다.</EmptyNote>

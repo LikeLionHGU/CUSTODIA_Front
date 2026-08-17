@@ -7,8 +7,10 @@ import Profile from "../assets/icon_profile.svg";
 export default function Header() {
     return <Container>
         <LogoLink to="/"><LogoImage src={Logo} /></LogoLink>
-        <NavigatorContainer><Links /></NavigatorContainer>
-        <ProfileImage src={Profile} />
+        <RightGroup>
+            <NavigatorContainer><Links /></NavigatorContainer>
+            <ProfileBox><ProfileImage src={Profile} alt="" /></ProfileBox>
+        </RightGroup>
     </Container>;
 }
 
@@ -60,13 +62,25 @@ const LogoLink = styled(Link)`
 const LogoImage = styled.img`
     height:27.18px;
 `
+const RightGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 48px;
+`
+const ProfileBox = styled.div`
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 20px;
+`
 const ProfileImage = styled.img`
-    height:20px;
+    width: 16.231px;
+    height: 16.231px;
 `
 const NavigatorContainer = styled.div`
-  flex: 1;
   display: flex;
-  justify-content: center;
   align-items: center;
   gap: 48px;
 
@@ -75,7 +89,7 @@ const NavigatorContainer = styled.div`
   }
 `
 const NavigatorText = styled(Link)`
-    color: #000;
+    color: #222;
     font-family: "Noto Sans KR", "Pretendard", sans-serif;
     font-size: 14px;
     font-weight: 700;

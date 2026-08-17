@@ -1,8 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import * as pickup from "../api/pickup";
+import { useApiQuery } from "../api/useApiQuery";
+import { toErrorMessage } from "../api/format";
 import styled from "styled-components";
 
 const WEEKDAYS_KO = ["일", "월", "화", "수", "목", "금", "토"];
+
+// 명세 4-3 검증 표
+const PICKUP_ERRORS = {
+  SLOT_FULL: "선택하신 시간대가 마감되었습니다. 다른 시간대를 선택해 주세요.",
+  PICKUP_ALREADY_EXISTS: "이미 예약된 픽업이 있습니다. 기존 예약을 취소한 뒤 다시 시도해 주세요.",
+  PAST_DATE: "지난 날짜·시간대는 선택할 수 없습니다.",
+  NO_AVAILABLE_DRIVER: "배정 가능한 기사가 없습니다. 다른 일정을 선택해 주세요.",
+  INVALID_STATUS: "예약할 수 없는 접수 상태입니다.",
+};
+
+/** Date → `2026-08-18` (API가 쓰는 LocalDate 형식) */
+function toDateKey(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
 
 const SAFETY_ITEMS = [
   { label: "기사 신원 확인" },
@@ -10,10 +28,6 @@ const SAFETY_ITEMS = [
   { label: "고객·기사 전자서명" },
   { label: "운송 보험 자동 적용" },
 ];
-
-function pad(n) {
-  return String(n).padStart(2, "0");
-}
 
 function getTomorrow() {
   const d = new Date();
@@ -30,29 +44,6 @@ function isSameDate(a, b) {
 function formatDateKorean(date) {
   if (!date) return "";
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAYS_KO[date.getDay()]})`;
-}
-
-function to12Hour(hour, minute) {
-  const period = hour < 12 ? "오전" : "오후";
-  const h12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${period} ${h12}:${pad(minute)}`;
-}
-
-function generateTimeSlots() {
-  const slots = [];
-  const startMinutes = 9 * 60;
-  const endMinutes = 18 * 60;
-  for (let m = startMinutes; m + 30 <= endMinutes; m += 30) {
-    const startH = Math.floor(m / 60);
-    const startM = m % 60;
-    const endTotal = m + 30;
-    const endH = Math.floor(endTotal / 60);
-    const endM = endTotal % 60;
-    const value = `${pad(startH)}:${pad(startM)}-${pad(endH)}:${pad(endM)}`;
-    const label = `${to12Hour(startH, startM)} - ${to12Hour(endH, endM)}`;
-    slots.push({ value, label });
-  }
-  return slots;
 }
 
 function buildCalendarDays(monthDate) {
@@ -72,7 +63,6 @@ function formatPhoneNumber(digits) {
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
 }
 
-const TIME_SLOTS = generateTimeSlots();
 
 const Page = styled.div`
   width: 100%;
@@ -467,10 +457,19 @@ export default function AS_PickupReservation() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const receiptInfo = location.state?.receiptInfo || {
-    productName: "MCM 클래식 백팩 미디엄",
-    receiptNumber: "MCM-2024-008431",
-    status: "견적 안내 완료",
+  // 712에서 asNo 를 들고 넘어온다
+  const asNo = location.state?.asNo;
+
+  // 명세 4-1: 접수 건 요약 + 회원 연락처 기본값
+  const { data: form, error: formError } = useApiQuery(
+    () => (asNo ? pickup.getForm(asNo) : Promise.reject(new Error("접수 번호가 없습니다."))),
+    [asNo],
+  );
+
+  const receiptInfo = {
+    productName: form?.modelName ?? "—",
+    receiptNumber: form?.asNo ?? asNo ?? "—",
+    status: form?.statusLabel ?? "—",
   };
 
   const minSelectableDate = useMemo(() => getTomorrow(), []);
@@ -482,6 +481,8 @@ export default function AS_PickupReservation() {
   const [addressDetail, setAddressDetail] = useState("");
   const [note, setNote] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(
     () => new Date(minSelectableDate.getFullYear(), minSelectableDate.getMonth(), 1),
   );
@@ -502,7 +503,21 @@ export default function AS_PickupReservation() {
   }, [calendarOpen]);
 
   const calendarDays = useMemo(() => buildCalendarDays(calendarMonth), [calendarMonth]);
-  const selectedTimeSlot = TIME_SLOTS.find((slot) => slot.value === pickupTime);
+
+  // 명세 4-2: 예약 가능 슬롯. startDate 생략 시 오늘, endDate 생략 시 +14일
+  const { data: slotData } = useApiQuery(() => pickup.getSlots(), []);
+
+  const availableDateSet = new Set(
+    (slotData?.dateList ?? [])
+      .filter((entry) => entry.slotList.some((slot) => slot.available))
+      .map((entry) => entry.date),
+  );
+
+  const selectedDateKey = pickupDate ? toDateKey(pickupDate) : null;
+  const timeSlots = (slotData?.dateList ?? []).find((entry) => entry.date === selectedDateKey)
+    ?.slotList ?? [];
+
+  const selectedTimeSlot = timeSlots.find((slot) => slot.slotStart === pickupTime);
 
   const handlePrevMonth = () => {
     setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -513,8 +528,9 @@ export default function AS_PickupReservation() {
   };
 
   const handleSelectDate = (date) => {
-    if (!date || date < minSelectableDate) return;
+    if (!date || date < minSelectableDate || !availableDateSet.has(toDateKey(date))) return;
     setPickupDate(date);
+    setPickupTime("");
     setCalendarOpen(false);
   };
 
@@ -524,25 +540,31 @@ export default function AS_PickupReservation() {
   };
 
   const phoneDigits = phone.replace(/\D/g, "");
-  const isFormValid = !!pickupDate && !!pickupTime && phoneDigits.length >= 10 && address.trim() !== "";
+  const isFormValid =
+    !!pickupDate && !!pickupTime && phoneDigits.length >= 10 && address.trim() !== "" && !submitting;
 
-  const handleConfirm = () => {
+  // 명세 4-3: 예약 확정. slotEnd 는 서버가 슬롯 마스터에서 가져오므로 보내지 않는다.
+  const handleConfirm = async () => {
     if (!isFormValid) return;
 
-    const reservationNumber = `PKP-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900000) + 100000)}`;
-    const pickupSchedule = `${formatDateKorean(pickupDate)} ${selectedTimeSlot?.label ?? ""}`;
-    const addressText = [address.trim(), addressDetail.trim()].filter(Boolean).join(" ");
+    setSubmitting(true);
+    setSubmitError(null);
 
-    navigate("/reservation-complete", {
-      state: {
-        reservationNumber,
-        productName: receiptInfo.productName,
-        pickupSchedule,
-        address: addressText,
-        phone,
+    try {
+      const { pickupNo } = await pickup.create(asNo, {
+        pickupDate: toDateKey(pickupDate),
+        slotStart: pickupTime,
+        phone: phoneDigits,
+        address: address.trim(),
+        addressDetail: addressDetail.trim(),
         note: note.trim(),
-      },
-    });
+      });
+      navigate("/reservation-complete", { state: { pickupNo } });
+    } catch (err) {
+      setSubmitError(PICKUP_ERRORS[err.code] || toErrorMessage(err, "예약에 실패했습니다."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -598,7 +620,9 @@ export default function AS_PickupReservation() {
                         ))}
                         {calendarDays.map((date, idx) => {
                           if (!date) return <div key={`blank-${idx}`} />;
-                          const disabled = date < minSelectableDate;
+                          // 명세 4-2: 예약 가능 슬롯이 하나도 없는 날짜는 선택할 수 없다
+                          const disabled =
+                            date < minSelectableDate || !availableDateSet.has(toDateKey(date));
                           const selected = isSameDate(date, pickupDate);
                           return (
                             <CalendarDay
@@ -629,9 +653,14 @@ export default function AS_PickupReservation() {
                       <option value="" disabled hidden>
                         시간대 선택
                       </option>
-                      {TIME_SLOTS.map((slot) => (
-                        <option key={slot.value} value={slot.value}>
-                          {slot.label}
+                      {timeSlots.map((slot) => (
+                        <option
+                          key={slot.slotStart}
+                          value={slot.slotStart}
+                          disabled={!slot.available}
+                        >
+                          {slot.slotStart} – {slot.slotEnd}
+                          {slot.available ? "" : " (마감)"}
                         </option>
                       ))}
                     </Select>
@@ -707,7 +736,11 @@ export default function AS_PickupReservation() {
                 </SummaryRow>
                 <SummaryRow>
                   <SummaryLabel>픽업 시간대</SummaryLabel>
-                  <SummaryValue>{selectedTimeSlot ? selectedTimeSlot.label : "-"}</SummaryValue>
+                  <SummaryValue>
+                    {selectedTimeSlot
+                      ? `${selectedTimeSlot.slotStart} – ${selectedTimeSlot.slotEnd}`
+                      : "-"}
+                  </SummaryValue>
                 </SummaryRow>
                 <SummaryRow>
                   <SummaryLabel>수거 주소</SummaryLabel>
@@ -725,8 +758,13 @@ export default function AS_PickupReservation() {
                 <CardText>최종 수선 비용은 실물 진단 후 별도 안내됩니다. 예상 견적은 참고용입니다.</CardText>
               </Card>
 
+              {(submitError || formError) && (
+                <CardText role="alert" style={{ color: "#c0392b" }}>
+                  {submitError || toErrorMessage(formError)}
+                </CardText>
+              )}
               <Button type="button" disabled={!isFormValid} onClick={handleConfirm}>
-                예약 확정
+                {submitting ? "예약 중…" : "예약 확정"}
               </Button>
             </RightColumn>
           </Columns>
