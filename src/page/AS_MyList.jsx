@@ -1,336 +1,561 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
+
+import StatusLabel from "../components/StatusLabel";
 import * as asCase from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
 import { formatDotDate, toErrorMessage } from "../api/format";
+import chevronDown from "../assets/icon_chevron_down.svg";
 
-// 명세 3-5: filter 는 ALL · IN_PROGRESS · COMPLETED
+/** 명세 3-5: filter 는 ALL · IN_PROGRESS · COMPLETED */
 const FILTERS = [
-  { label: "진행중", value: "IN_PROGRESS" },
-  { label: "완료", value: "COMPLETED" },
   { label: "전체", value: "ALL" },
+  { label: "진행 중", value: "IN_PROGRESS" },
+  { label: "완료", value: "COMPLETED" },
 ];
+
+const PAGE_SIZE = 20;
+
+/** 목록 표의 열 정의. 헤더와 본문 행이 같은 grid-template 을 공유한다. */
+const COLUMNS = ["제품 정보", "접수 번호", "상태", "일정", "갱신일"];
+
+/**
+ * 명세 3-5: 진행 중은 expectedCompletedAt, 완료된 건은 completedAt 을 보여주고
+ * 화면 라벨도 "예상 완료" / "완료일" 로 달라진다.
+ */
+function formatSchedule(item) {
+  if (item.completedAt) return `완료일 ${formatDotDate(item.completedAt)}`;
+  if (item.expectedCompletedAt) return `예상 완료 ${formatDotDate(item.expectedCompletedAt)}`;
+  return "—";
+}
+
+export default function AS_MyList() {
+  const navigate = useNavigate();
+  const [filter, setFilter] = useState("ALL");
+  const [page, setPage] = useState(0);
+
+  // 선택된 필터 버튼 위로 인디케이터를 옮기기 위한 위치값.
+  // 버튼마다 글자 폭이 달라서 고정 비율 대신 실제 위치를 재서 옮긴다.
+  const filterRefs = useRef({});
+  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+
+  useEffect(() => {
+    const target = filterRefs.current[filter];
+    if (target) setIndicator({ left: target.offsetLeft, width: target.offsetWidth });
+  }, [filter]);
+
+  const { data, loading, error } = useApiQuery(
+    () => asCase.getList({ filter, page, size: PAGE_SIZE }),
+    [filter, page],
+  );
+
+  const itemList = data?.itemList ?? [];
+  const totalPages = data?.totalPages ?? 1;
+
+  const handleFilterChange = (value) => {
+    setFilter(value);
+    setPage(0); // 필터가 바뀌면 첫 페이지로 되돌린다
+  };
+
+  return (
+    <Page>
+      <Body>
+        <TopRow>
+          <PageTitle>A/S 조회</PageTitle>
+          <FilterGroup>
+            <FilterIndicator
+              style={{ transform: `translateX(${indicator.left}px)`, width: indicator.width }}
+              aria-hidden
+            />
+            {FILTERS.map((item) => (
+              <FilterButton
+                key={item.value}
+                ref={(el) => {
+                  filterRefs.current[item.value] = el;
+                }}
+                type="button"
+                $active={filter === item.value}
+                onClick={() => handleFilterChange(item.value)}
+              >
+                {item.label}
+              </FilterButton>
+            ))}
+          </FilterGroup>
+        </TopRow>
+
+        {/* 나의 AS 현황 — 진행 중 / 완료 / 최근 갱신 3분할 */}
+        <Card>
+          <CardHeader>
+            <CardHeaderInner>나의 AS 현황</CardHeaderInner>
+          </CardHeader>
+          <SummaryGrid>
+            <SummaryCell>
+              <SummaryLabel>진행 중</SummaryLabel>
+              <SummaryValue>{data ? `${data.inProgressCount}건` : "—"}</SummaryValue>
+              <SummaryNote>픽업 예약 포함</SummaryNote>
+            </SummaryCell>
+            <SummaryCell>
+              <SummaryLabel>완료</SummaryLabel>
+              <SummaryValue>{data ? `${data.completedCount}건` : "—"}</SummaryValue>
+              <SummaryNote>누적 완료 건수</SummaryNote>
+            </SummaryCell>
+            <SummaryCell $last>
+              <SummaryLabel>최근 갱신</SummaryLabel>
+              <SummaryValue>
+                {data?.lastUpdatedAt ? formatDotDate(data.lastUpdatedAt) : "—"}
+              </SummaryValue>
+              <SummaryNote>마지막 상태 업데이트</SummaryNote>
+            </SummaryCell>
+          </SummaryGrid>
+        </Card>
+
+        {/* 접수 건 목록 */}
+        <Card>
+          <CardHeader>
+            <CardHeaderInner>
+              접수 건 목록
+              <TotalCount>{data ? `총 ${data.totalElements}건` : ""}</TotalCount>
+            </CardHeaderInner>
+          </CardHeader>
+
+          <TableHeader>
+            <HeaderCell aria-hidden />
+            {COLUMNS.map((column) => (
+              <HeaderCell key={column}>{column}</HeaderCell>
+            ))}
+            <HeaderCell aria-hidden />
+          </TableHeader>
+
+          <TableBody>
+            {loading && <StateRow>불러오는 중…</StateRow>}
+            {!loading && error && <StateRow role="alert">{toErrorMessage(error)}</StateRow>}
+            {!loading && !error && itemList.length === 0 && (
+              <StateRow>조회된 접수 건이 없습니다.</StateRow>
+            )}
+
+            {itemList.map((item) => (
+              <Row
+                key={item.asNo}
+                type="button"
+                onClick={() => navigate("/my-as-detail", { state: { asNo: item.asNo } })}
+              >
+                <Thumb>
+                  {/* thumbnailUrl 은 접수 시 올린 첫 사진의 서명 URL (유효 24시간).
+                      저장해 두고 재사용하지 말 것 — 만료되면 화면을 다시 조회한다. */}
+                  {item.thumbnailUrl && (
+                    <ThumbImage
+                      src={item.thumbnailUrl}
+                      alt=""
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  )}
+                </Thumb>
+                <ProductCell>
+                  <ProductName>{item.modelName}</ProductName>
+                  <ProductMeta>접수일 {formatDotDate(item.createdAt)}</ProductMeta>
+                </ProductCell>
+                <MutedCell>{item.asNo}</MutedCell>
+                <div>
+                  <StatusLabel status={item.status} label={item.statusLabel} />
+                </div>
+                <ScheduleCell>{formatSchedule(item)}</ScheduleCell>
+                <MutedCell>{formatDotDate(item.statusUpdatedAt)}</MutedCell>
+                <RowChevron src={chevronDown} alt="" />
+              </Row>
+            ))}
+          </TableBody>
+        </Card>
+
+        {totalPages > 1 && (
+          <Pagination>
+            <PageArrow
+              type="button"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              aria-label="이전 페이지"
+            >
+              ‹
+            </PageArrow>
+            {Array.from({ length: totalPages }, (_, index) => (
+              <PageNumber
+                key={index}
+                type="button"
+                $active={index === page}
+                onClick={() => setPage(index)}
+              >
+                {index + 1}
+              </PageNumber>
+            ))}
+            <PageArrow
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              aria-label="다음 페이지"
+            >
+              ›
+            </PageArrow>
+          </Pagination>
+        )}
+      </Body>
+    </Page>
+  );
+}
+
+/* ------------------------------------------------------------------ 레이아웃 */
 
 const Page = styled.div`
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+  min-height: 100%;
+  background: #f9f9f9;
   box-sizing: border-box;
   text-align: left;
 `;
 
-const BodyRow = styled.div`
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-`;
-
 const Body = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
+  width: 100%;
+  max-width: 1441px;
+  margin: 0 auto;
+  padding: 60px 48px 100px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 24px;
-  box-sizing: border-box;
+  gap: 36px;
+
+  @media (max-width: 640px) {
+    padding: 40px 18px 60px;
+  }
 `;
 
-const TitleRow = styled.div`
+const TopRow = styled.div`
   width: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
 `;
 
-const SectionTitle = styled.p`
+const PageTitle = styled.h1`
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  color: #1f2937;
+  color: #222;
 `;
 
-const Spacer = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
-  height: 1px;
+/* ------------------------------------------------------------------ 필터 */
+
+const FilterGroup = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
 `;
 
-const Chip = styled.button`
-  min-width: 40px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 500;
+/** 선택된 버튼 뒤를 따라 미끄러지는 배경. 버튼보다 뒤에 깔린다. */
+const FilterIndicator = styled.span`
+  position: absolute;
+  top: 4px;
+  left: 0;
+  bottom: 4px;
+  border-radius: 4px;
+  background: #222;
+  transition:
+    transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
+    width 240ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+`;
+
+const FilterButton = styled.button`
+  position: relative;
+  z-index: 1;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 4px;
+  background: none;
   cursor: pointer;
-  box-sizing: border-box;
-  background: ${(props) => (props.$selected ? "#1f2937" : "#f3f4f6")};
-  color: ${(props) => (props.$selected ? "#fff" : "#1f2937")};
-  border: 1px solid #e5e7eb;
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: 0.48px;
+  color: ${(props) => (props.$active ? "#fff" : "#919191")};
+  transition: color 240ms ease;
 `;
 
-const Card = styled.div`
+/* ------------------------------------------------------------------ 카드 */
+
+const Card = styled.section`
   width: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
 `;
 
-const CardTitle = styled.p`
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
+/** 헤더 밑줄이 좌우 24px 안쪽으로만 들어가는 디자인 */
+const CardHeader = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 24px;
 `;
+
+const CardHeaderInner = styled.div`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0;
+  border-bottom: 1px solid #ededed;
+  box-sizing: border-box;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #222;
+`;
+
+const TotalCount = styled.span`
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16.5px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #9ca3af;
+`;
+
+/* ------------------------------------------------------------------ 요약 */
 
 const SummaryGrid = styled.div`
   width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
-const SummaryItem = styled.div`
-  flex: 1 0 0;
-  min-width: 80px;
-  box-sizing: border-box;
+const SummaryCell = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  gap: 4px;
+  padding: 24px 32px;
+  box-sizing: border-box;
+  border-right: ${(props) => (props.$last ? "none" : "1px solid #ededed")};
+
+  @media (max-width: 640px) {
+    border-right: none;
+    border-bottom: ${(props) => (props.$last ? "none" : "1px solid #ededed")};
+  }
 `;
 
 const SummaryLabel = styled.p`
   margin: 0;
   font-size: 11px;
-  color: #1f2937;
+  line-height: 16.5px;
+  letter-spacing: 0.88px;
+  text-transform: uppercase;
+  color: #919191;
 `;
 
 const SummaryValue = styled.p`
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 28px;
+  line-height: 35px;
+  color: #222;
 `;
 
-const SummaryValueSmall = styled.p`
+const SummaryNote = styled.p`
   margin: 0;
-  font-size: 12px;
-  color: #1f2937;
+  font-size: 11px;
+  line-height: 16.5px;
+  color: #c4c4c4;
 `;
 
-const ListTitle = styled.p`
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
+/* ------------------------------------------------------------------ 목록 표 */
+
+/** 헤더와 본문 행이 공유하는 열 정의 (썸네일 / 제품 / 접수번호 / 상태 / 일정 / 갱신일 / 화살표) */
+const gridTemplate = `
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 120px 140px 160px 120px 16px;
+  gap: 16px;
+  align-items: center;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 56px minmax(0, 1fr) 140px 16px;
+  }
 `;
 
-const CaseCard = styled.button`
-  width: 100%;
+const TableHeader = styled.div`
+  ${gridTemplate}
+  height: 40px;
+  padding: 0 24px;
   box-sizing: border-box;
+  background: #f9f9f9;
+
+  @media (max-width: 1100px) {
+    display: none;
+  }
+`;
+
+const HeaderCell = styled.span`
+  font-size: 10px;
+  line-height: 15px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #919191;
+`;
+
+const TableBody = styled.div`
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  padding: 12px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  cursor: pointer;
+`;
+
+const Row = styled.button`
+  ${gridTemplate}
+  width: 100%;
+  padding: 16px 24px;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 1px solid #f7f7f5;
+  background: #fff;
   text-align: left;
   font: inherit;
-`;
-
-const CaseRow = styled.div`
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-`;
-
-const CaseInfo = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
-
-const CaseId = styled.p`
-  margin: 0;
-  font-size: 11px;
-  color: #1f2937;
-`;
-
-const CaseName = styled.p`
-  margin: 0;
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const CaseDate = styled.p`
-  margin: 0;
-  font-size: 11px;
-  color: #1f2937;
-`;
-
-const CaseStatusCol = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-`;
-
-const EmptyCard = styled(Card)`
-  align-items: center;
-  text-align: center;
-`;
-
-const EmptyText = styled.p`
-  margin: 0;
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const EmptyNote = styled.p`
-  margin: 0;
-  font-size: 11px;
-  color: #1f2937;
-`;
-
-const Button = styled.button`
-  min-width: 60px;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
-  border: none;
-  background: #1f2937;
-  color: #fff;
+  transition: background 120ms ease;
+
+  /* 디자인 572:11939 — 호버 시 행 배경이 회색으로 바뀐다 */
+  &:hover {
+    background: #f9f9f9;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
-export default function AS_MyList() {
-  const navigate = useNavigate();
-  const [filter, setFilter] = useState("ALL");
+const Thumb = styled.div`
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f2f2f0;
+`;
 
-  const { data, loading, error } = useApiQuery(() => asCase.getList({ filter }), [filter]);
-  const itemList = data?.itemList ?? [];
+const ThumbImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+`;
 
-  const handleCaseClick = (item) => {
-    navigate("/my-as-detail", { state: { asNo: item.asNo } });
-  };
+const ProductCell = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
 
-  const handleAsStart = () => {
-    navigate("/as-start");
-  };
+const ProductName = styled.p`
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 19.5px;
+  color: #222;
+`;
 
-  return (
-    <Page>
-      <BodyRow>
-        <Body>
-          <TitleRow>
-            <SectionTitle>리페어 패스포트</SectionTitle>
-            <Spacer />
-            {FILTERS.map((item) => (
-              <Chip
-                key={item.value}
-                type="button"
-                $selected={filter === item.value}
-                onClick={() => setFilter(item.value)}
-              >
-                {item.label}
-              </Chip>
-            ))}
-          </TitleRow>
+const ProductMeta = styled.p`
+  margin: 0;
+  font-size: 11px;
+  line-height: 16.5px;
+  color: #919191;
+`;
 
-          <Card>
-            <CardTitle>국내외 수선 현황</CardTitle>
-            <SummaryGrid>
-              <SummaryItem>
-                <SummaryLabel>진행 중</SummaryLabel>
-                <SummaryValue>{data ? `${data.inProgressCount}건` : "—"}</SummaryValue>
-              </SummaryItem>
-              <SummaryItem>
-                <SummaryLabel>완료</SummaryLabel>
-                <SummaryValue>{data ? `${data.completedCount}건` : "—"}</SummaryValue>
-              </SummaryItem>
-              <SummaryItem>
-                <SummaryLabel>최근 갱신</SummaryLabel>
-                <SummaryValueSmall>
-                  {data?.lastUpdatedAt ? formatDotDate(data.lastUpdatedAt) : "—"}
-                </SummaryValueSmall>
-              </SummaryItem>
-            </SummaryGrid>
-          </Card>
+const MutedCell = styled.p`
+  margin: 0;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 16.5px;
+  color: #919191;
 
-          <ListTitle>접수 건 목록</ListTitle>
+  @media (max-width: 1100px) {
+    display: none;
+  }
+`;
 
-          {itemList.map((item) => (
-            <CaseCard key={item.asNo} type="button" onClick={() => handleCaseClick(item)}>
-              <CaseRow>
-                <CaseInfo>
-                  <CaseId>{item.asNo}</CaseId>
-                  <CaseName>{item.modelName}</CaseName>
-                  <CaseDate>접수일 {formatDotDate(item.createdAt)}</CaseDate>
-                </CaseInfo>
-                <Spacer />
-                <CaseStatusCol>
-                  <Chip as="span" $selected={false}>
-                    {item.statusLabel}
-                  </Chip>
-                  {/* 명세 3-5: 진행 중은 expectedCompletedAt, 완료는 completedAt */}
-                  <CaseDate>
-                    {item.completedAt
-                      ? `완료일 ${formatDotDate(item.completedAt)}`
-                      : item.expectedCompletedAt
-                        ? `예상 완료 ${formatDotDate(item.expectedCompletedAt)}`
-                        : ""}
-                  </CaseDate>
-                  <CaseDate>최근 갱신 {formatDotDate(item.statusUpdatedAt)}</CaseDate>
-                </CaseStatusCol>
-              </CaseRow>
-            </CaseCard>
-          ))}
+const ScheduleCell = styled.p`
+  margin: 0;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 12px;
+  color: #222;
 
-          {loading && <EmptyCard><EmptyText>불러오는 중…</EmptyText></EmptyCard>}
+  @media (max-width: 1100px) {
+    display: none;
+  }
+`;
 
-          {!loading && error && (
-            <EmptyCard>
-              <EmptyText>{toErrorMessage(error)}</EmptyText>
-            </EmptyCard>
-          )}
+const RowChevron = styled.img`
+  width: 10px;
+  height: 5px;
+  justify-self: end;
+  transform: rotate(-90deg);
+`;
 
-          {!loading && !error && itemList.length === 0 && (
-            <EmptyCard>
-              <EmptyText>접수 건이 없습니다</EmptyText>
-              <EmptyNote>AS 접수를 완료하면 리페어 패스포트에서 진행 상황을 실시간으로 확인하실 수 있습니다.</EmptyNote>
-              <Button type="button" onClick={handleAsStart}>
-                AS 접수하기
-              </Button>
-            </EmptyCard>
-          )}
-        </Body>
-      </BodyRow>
-    </Page>
-  );
-}
+const StateRow = styled.p`
+  margin: 0;
+  padding: 40px 24px;
+  text-align: center;
+  font-size: 12px;
+  color: #919191;
+`;
+
+/* ------------------------------------------------------------------ 페이지네이션 */
+
+const Pagination = styled.nav`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+`;
+
+const pageButton = `
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 18px;
+`;
+
+const PageArrow = styled.button`
+  ${pageButton}
+  color: #919191;
+
+  &:disabled {
+    color: #d1d5db;
+    cursor: default;
+  }
+`;
+
+const PageNumber = styled.button`
+  ${pageButton}
+  background: ${(props) => (props.$active ? "#222" : "none")};
+  color: ${(props) => (props.$active ? "#fff" : "#919191")};
+`;

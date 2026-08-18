@@ -1,85 +1,80 @@
 import { Link, useLocation } from "react-router-dom";
 import styled from "styled-components";
 
-import Logo from "../assets/logo_main.svg";
+import Logo from "../assets/logo_custodia.svg";
 import Profile from "../assets/icon_profile.svg";
 
-export default function Header() {
-    return <Container>
-        <LogoLink to="/"><LogoImage src={Logo} /></LogoLink>
-        <RightGroup>
-            <NavigatorContainer><Links /></NavigatorContainer>
-            <ProfileBox><ProfileImage src={Profile} alt="" /></ProfileBox>
-        </RightGroup>
-    </Container>;
-}
+/** 상단 내비게이션. 경로가 일치하는 메뉴에 밑줄이 붙는다. */
+const NAV_ITEMS = [
+  { label: "A/S 접수", to: "/product-info" },
+  { label: "A/S 조회", to: "/my-as-list" },
+  { label: "AI 상담", to: "/pick-as" },
+];
 
-function Links() {
+export default function Header() {
   const { pathname } = useLocation();
 
   return (
-    <>
-      <NavigatorText to="/product-info" $active={pathname === "/product-info"}>
-        AI 견적
-      </NavigatorText>
-      <NavigatorText to="/as-start" $active={pathname === "/as-start"}>
-        A/S 접수
-      </NavigatorText>
-      <NavigatorText to="/my-as-list" $active={pathname === "/my-as-list"}>
-        A/S 조회
-      </NavigatorText>
-      <NavigatorText to="/pick-as" $active={pathname === "/pick-as"}>
-        AI 상담
-      </NavigatorText>
-    </>
+    <Container>
+      <LogoLink to="/">
+        <LogoImage src={Logo} alt="CUSTODIA" />
+      </LogoLink>
+
+      {/* 내비게이션과 프로필은 우측에 48px 간격의 한 그룹으로 묶인다 */}
+      <RightGroup>
+        <Nav>
+          {NAV_ITEMS.map((item) => (
+            <NavLink key={item.to} to={item.to} $active={pathname === item.to}>
+              {item.label}
+            </NavLink>
+          ))}
+        </Nav>
+        <ProfileLink to="/login" aria-label="로그인">
+          <ProfileImage src={Profile} alt="" />
+        </ProfileLink>
+      </RightGroup>
+    </Container>
   );
 }
 
-const Container = styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 100;
-    width: 100%;
-    height: 80px;
-    padding: 0 48px;
-    background-color: white;
-    border-bottom: 1px solid #ededed;
-    box-sizing: border-box;
+const Container = styled.header`
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  width: 100%;
+  height: 80px;
+  padding: 0 48px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border-bottom: 1px solid #ededed;
 
-    @media (max-width: 640px) {
-      height: 68px;
-      padding: 0 18px;
-    }
-`
+  @media (max-width: 640px) {
+    height: 68px;
+    padding: 0 18px;
+  }
+`;
+
 const LogoLink = styled(Link)`
-    display: flex;
-    align-items: center;
-`
+  display: flex;
+  align-items: center;
+`;
+
 const LogoImage = styled.img`
-    height:27.18px;
-`
+  width: 117px;
+  height: 17.92px;
+`;
+
 const RightGroup = styled.div`
   display: flex;
   align-items: center;
   gap: 48px;
-`
-const ProfileBox = styled.div`
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 20px;
-`
-const ProfileImage = styled.img`
-    width: 16.231px;
-    height: 16.231px;
-`
-const NavigatorContainer = styled.div`
+`;
+
+const Nav = styled.nav`
   display: flex;
   align-items: center;
   gap: 48px;
@@ -87,14 +82,29 @@ const NavigatorContainer = styled.div`
   @media (max-width: 640px) {
     display: none;
   }
-`
-const NavigatorText = styled(Link)`
-    color: #222;
-    font-family: "Noto Sans KR", "Pretendard", sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 8px 0;
-    border-bottom: 1px solid ${(props) => (props.$active ? "#000" : "transparent")};
-`
+`;
+
+const NavLink = styled(Link)`
+  padding: 8px 0;
+  border-bottom: 1px solid ${(props) => (props.$active ? "#000" : "transparent")};
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+`;
+
+/** 프로필 아이콘. 누르면 로그인 화면으로 이동한다. */
+const ProfileLink = styled(Link)`
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 20px;
+`;
+
+const ProfileImage = styled.img`
+  width: 16.231px;
+  height: 16.231px;
+`;

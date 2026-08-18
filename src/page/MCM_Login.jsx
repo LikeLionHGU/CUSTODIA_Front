@@ -2,7 +2,8 @@ import { useState } from "react";
 import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
 
-import GoogleIcon from "../assets/icon_google.svg";
+import { GoogleLogin } from "@react-oauth/google";
+
 import * as member from "../api/member";
 
 export default function MCM_Login() {
@@ -12,6 +13,24 @@ export default function MCM_Login() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
+
+  /**
+   * 구글 SDK 가 준 ID 토큰(credential)을 서버로 넘기면 우리 JWT 가 온다.
+   * 소셜 가입자는 연락처가 없어 픽업 예약에서 막히므로 needsContactInfo 를 확인한다.
+   */
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError(null);
+    try {
+      const result = await member.loginWithGoogle(credentialResponse.credential);
+      if (result.needsContactInfo) {
+        // 마이페이지 화면이 아직 없어 홈으로 보내되 안내는 남긴다
+        alert("픽업 예약을 위해 연락처 입력이 필요합니다.");
+      }
+      navigate("/");
+    } catch (err) {
+      setError(err.message || "구글 로그인에 실패했습니다.");
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -78,10 +97,15 @@ export default function MCM_Login() {
 
         <Divider><span>또는</span></Divider>
 
-        <GoogleButton type="button">
-          <img src={GoogleIcon} alt="" />
-          <span>구글로 로그인</span>
-        </GoogleButton>
+        {/* useGoogleLogin 은 access token 만 주고 ID 토큰을 주지 않는다.
+            서버가 ID 토큰만 검증하므로 공식 GoogleLogin 컴포넌트를 쓴다. */}
+        <GoogleButtonWrap>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError("구글 로그인에 실패했습니다.")}
+            width="443"
+          />
+        </GoogleButtonWrap>
 
         <SignupText>
           계정이 없으신가요? <SignupLink to="/signup">가입하기</SignupLink>
@@ -203,28 +227,10 @@ const Divider = styled.div`
   font-size: 11px;
 `;
 
-const GoogleButton = styled.button`
-  position: relative;
+
+const GoogleButtonWrap = styled.div`
   display: flex;
-  align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 48px;
-  border: 1px solid #4b3b3c;
-  color: #201213;
-  font-size: 13px;
-  font-weight: 600;
-
-  img {
-    position: absolute;
-    left: 15px;
-    width: 24px;
-    height: 24px;
-  }
-
-  &:hover {
-    background: #faf7f7;
-  }
 `;
 
 const SignupText = styled.p`

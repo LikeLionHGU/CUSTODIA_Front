@@ -4,7 +4,6 @@ import MainLayout from "../layouts/MainLayout";
 import MCM_Home from "../page/MCM_Home";
 import MCM_Login from "../page/MCM_Login";
 import MCM_Signup from "../page/MCM_Signup";
-import AS_Start from "../page/AS_Start";
 import AS_ProductInfo from "../page/AS_ProductInfo";
 import AS_AiEstimate from "../page/AS_AiEstimate";
 import AS_MyList from "../page/AS_MyList";
@@ -34,10 +33,6 @@ const router = createBrowserRouter([
       {
         path: "signup",
         element: <MCM_Signup />,
-      },
-      {
-        path: "as-start",
-        element: <AS_Start />,
       },
 
       //===============제품 정보 입력 화면==========================

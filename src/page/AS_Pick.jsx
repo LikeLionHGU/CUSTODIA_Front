@@ -2,22 +2,19 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import Button from "../components/Button";
-import * as consultation from "../api/consultation";
+import StatusLabel from "../components/StatusLabel";
+import * as asCase from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
 import { formatDotDate, toErrorMessage } from "../api/format";
-
-// 디자인의 상태 pill 색상. SelectResDto 는 statusLabel(문자열)만 주고 status 코드가 없어
-// 현재는 전부 기본 톤으로 표시한다. (명세 부록 F #6 — 기획 확인 필요)
-const STATUS_TONES = {
-  progress: { background: "#ededed", color: "#222" },
-  success: { background: "#e5f3ea", color: "#4b7c5a" },
-  done: { background: "#f0f0f0", color: "#c4c4c4" },
-};
 
 export default function AS_Pick() {
   const navigate = useNavigate();
 
-  const { data, loading, error } = useApiQuery(() => consultation.getSelectList(), []);
+  // 명세 6-1: 711 전용 API 가 없어 A/S 조회 목록(710)을 그대로 재사용한다
+  const { data, loading, error } = useApiQuery(
+    () => asCase.getList({ filter: "ALL", page: 0, size: 20 }),
+    [],
+  );
   const itemList = data?.itemList ?? [];
 
   // 명세 6-1: 목록이 비면 "AS 이력이 없어요" 경로로 이동한다
@@ -28,7 +25,9 @@ export default function AS_Pick() {
   }, [loading, error, data, itemList.length, navigate]);
 
   const handleConsult = (item) => {
-    navigate("/ai-concierge", { state: { asNo: item.asNo } });
+    navigate("/ai-concierge", {
+      state: { asNo: item.asNo, modelName: item.modelName, statusLabel: item.statusLabel },
+    });
   };
 
   return (
@@ -57,18 +56,24 @@ export default function AS_Pick() {
           {itemList.map((item) => (
             <CaseCard key={item.asNo}>
               <CaseInfo>
-                {/* SelectResDto 에 제품 사진 필드가 없어 자리만 유지한다 */}
-                <CaseThumb />
+                <CaseThumb>
+                  {item.thumbnailUrl && (
+                    <CaseThumbImage
+                      src={item.thumbnailUrl}
+                      alt=""
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  )}
+                </CaseThumb>
                 <CaseTexts>
                   <CaseNameRow>
                     <CaseName>{item.modelName}</CaseName>
                   </CaseNameRow>
                   <CaseMetaRow>
                     <CaseId>{item.asNo}</CaseId>
-                    <StatusPill $tone="progress">
-                      <StatusDot $tone="progress" />
-                      {item.statusLabel}
-                    </StatusPill>
+                    <StatusLabel status={item.status} label={item.statusLabel} />
                   </CaseMetaRow>
                   <CaseDate>접수일 {formatDotDate(item.createdAt)}</CaseDate>
                 </CaseTexts>
@@ -162,8 +167,16 @@ const CaseThumb = styled.div`
   flex-shrink: 0;
   width: 80px;
   height: 80px;
+  overflow: hidden;
   background: #ededed;
   border-radius: 4px;
+`;
+
+const CaseThumbImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 `;
 
 const CaseTexts = styled.div`
@@ -205,26 +218,7 @@ const CaseId = styled.p`
   color: #313131;
 `;
 
-const StatusPill = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 12px;
-  background: ${(props) => STATUS_TONES[props.$tone].background};
-  color: ${(props) => STATUS_TONES[props.$tone].color};
-`;
 
-const StatusDot = styled.span`
-  flex-shrink: 0;
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: ${(props) => STATUS_TONES[props.$tone].color};
-`;
 
 const CaseDate = styled.p`
   margin: 0;

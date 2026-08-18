@@ -73,6 +73,12 @@ export async function request(path, { method = "GET", body, formData, auth = tru
     const code = payload?.code;
     // 토큰 만료면 저장된 토큰을 버려 다음 요청이 무한히 실패하지 않게 한다.
     if (response.status === 401 && code === "TOKEN_EXPIRED") clearAccessToken();
+
+    // 화면에는 message 만 노출되므로, 원인 추적용 상세는 콘솔에 남긴다.
+    console.error(
+      `[API] ${method} ${path} → ${response.status}${code ? ` ${code}` : ""}`,
+      payload,
+    );
     throw new ApiError(response.status, code, payload?.message, payload);
   }
 

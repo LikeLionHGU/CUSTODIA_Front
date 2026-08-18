@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import styled, { css } from "styled-components";
 import Button from "../components/Button";
 import AgentContactModal from "../components/AgentContactModal";
-import * as consultation from "../api/consultation";
+import * as chat from "../api/chat";
 import { useApiQuery } from "../api/useApiQuery";
 import { toErrorMessage } from "../api/format";
 
@@ -12,8 +12,8 @@ export default function AS_AiConcierge() {
   // 711에서 넘어오면 asNo 가 있고, 718(이력 없음)에서 오면 없다 — 명세 6-2
   const asNo = location.state?.asNo;
 
-  // 화면 진입 시 상담을 생성한다. asNo 가 없으면 이력 없는 신규 상담.
-  const { data, loading, error } = useApiQuery(() => consultation.create(asNo), [asNo]);
+  // 명세 6-2: 진입 시 인사말을 받는다. asNo 가 없으면 일반 인사(718).
+  const { data, loading, error } = useApiQuery(() => chat.getOpening(asNo), [asNo]);
 
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
@@ -22,16 +22,17 @@ export default function AS_AiConcierge() {
   const [contactOpen, setContactOpen] = useState(false);
 
   useEffect(() => {
-    if (data?.messageList) setMessages(data.messageList);
+    if (data?.answer) setMessages([{ role: "AI", content: data.answer }]);
   }, [data]);
 
+  // 상담 API 는 접수 건 정보를 주지 않는다. 711에서 넘어온 값을 그대로 쓴다.
   const caseInfo = [
-    { label: "접수 번호", value: data?.asNo || "—" },
-    { label: "제품명", value: data?.modelName || "—" },
-    { label: "현재 상태", value: data?.statusLabel || "—" },
+    { label: "접수 번호", value: asNo || "—" },
+    { label: "제품명", value: location.state?.modelName || "—" },
+    { label: "현재 상태", value: location.state?.statusLabel || "—" },
   ];
 
-  const canSend = draft.trim() !== "" && !sending && !!data?.consultationId;
+  const canSend = draft.trim() !== "" && !sending;
 
   const handleSend = async () => {
     if (!canSend) return;
@@ -41,11 +42,12 @@ export default function AS_AiConcierge() {
     setSending(true);
     setSendError(null);
     // 낙관적으로 내 메시지를 먼저 붙이고, 응답이 오면 AI 답변을 이어 붙인다.
-    setMessages((prev) => [...prev, { role: "MEMBER", content, createdAt: new Date().toISOString() }]);
+    setMessages((prev) => [...prev, { role: "MEMBER", content }]);
 
     try {
-      const reply = await consultation.sendMessage(data.consultationId, content);
-      setMessages((prev) => [...prev, reply]);
+      // sessionId 는 chat 모듈이 응답에서 받아 이어 붙인다
+      const reply = await chat.sendMessage(content, asNo);
+      setMessages((prev) => [...prev, { role: "AI", content: reply.answer }]);
     } catch (err) {
       setSendError(toErrorMessage(err, "메시지를 보내지 못했습니다."));
     } finally {
@@ -53,15 +55,8 @@ export default function AS_AiConcierge() {
     }
   };
 
-  const handleHandoff = async () => {
-    setContactOpen(true);
-    if (!data?.consultationId) return;
-    try {
-      await consultation.handoff(data.consultationId);
-    } catch {
-      // 연결 요청 기록에 실패해도 안내 모달은 그대로 보여준다.
-    }
-  };
+  // 명세 6-5: handoff API 는 만들지 않았다. 상담센터 번호 안내로 대체한다.
+  const handleHandoff = () => setContactOpen(true);
 
   return (
     <Page>
@@ -89,12 +84,12 @@ export default function AS_AiConcierge() {
 
             {messages.map((message, index) =>
               message.role === "AI" ? (
-                <AiRow key={`${message.createdAt}-${index}`}>
+                <AiRow key={index}>
                   <Avatar />
                   <AiBubble>{message.content}</AiBubble>
                 </AiRow>
               ) : (
-                <UserRow key={`${message.createdAt}-${index}`}>
+                <UserRow key={index}>
                   <UserBubble>{message.content}</UserBubble>
                 </UserRow>
               ),

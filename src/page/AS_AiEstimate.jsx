@@ -4,7 +4,7 @@ import styled from "styled-components";
 import Button from "../components/Button";
 import * as asCase from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
-import { formatKoreanDate, formatWonRange, toErrorMessage } from "../api/format";
+import { formatKoreanDate, formatWon, formatWonRange, toErrorMessage } from "../api/format";
 import StepIndicator from "../components/StepIndicator";
 import backArrow from "../assets/icon_back_arrow.svg";
 import infoIcon from "../assets/icon_info.svg";
@@ -151,29 +151,48 @@ export default function AS_AiEstimate() {
                 <CardHeaderInner>예상 수선 비용 범위</CardHeaderInner>
               </CardHeader>
               <CardBody>
-                <CostList>
-                  {(data?.itemList ?? []).map((item, index) => (
-                    <CostRow
-                      key={item.repairItemName}
-                      $divider={index < data.itemList.length - 1}
-                    >
-                      <CostLabel>{item.repairItemName}</CostLabel>
-                      <CostValue>{formatWonRange(item.minPrice, item.maxPrice)}</CostValue>
-                    </CostRow>
-                  ))}
-                  <CostTotalWrap>
-                    <CostTotal>
-                      <CostTotalLabel>예상 합계</CostTotalLabel>
-                      <CostTotalValue>
-                        {data ? formatWonRange(data.totalMinPrice, data.totalMaxPrice) : "—"}
-                      </CostTotalValue>
-                    </CostTotal>
-                  </CostTotalWrap>
-                </CostList>
+                {/* AI 가 손상을 찾지 못하면 itemList 가 비고 금액이 0이다.
+                    그대로 그리면 "₩0 – ₩0" 이 나오므로 안내 문구로 대체한다. */}
+                {data?.noDamageNotice ? (
+                  <MutedNote>{data.noDamageNotice}</MutedNote>
+                ) : (
+                  <>
+                    <CostList>
+                      {(data?.itemList ?? []).map((item, index) => (
+                        <CostRow
+                          key={item.repairItemName}
+                          $divider={index < data.itemList.length - 1}
+                        >
+                          <CostLabel>{item.repairItemName}</CostLabel>
+                          <CostValue>
+                            {/* estimatedPrice 는 손상 정도가 반영된 추정가.
+                                범위만 쓰면 경미/심각이 같은 금액으로 보인다. */}
+                            {item.estimatedPrice != null && (
+                              <CostPrimary>약 {formatWon(item.estimatedPrice)}</CostPrimary>
+                            )}
+                            <CostRange>{formatWonRange(item.minPrice, item.maxPrice)}</CostRange>
+                          </CostValue>
+                        </CostRow>
+                      ))}
+                      <CostTotalWrap>
+                        <CostTotal>
+                          <CostTotalLabel>예상 합계</CostTotalLabel>
+                          <CostTotalValue>
+                            {data?.totalEstimatedPrice != null
+                              ? `약 ${formatWon(data.totalEstimatedPrice)}`
+                              : data
+                                ? formatWonRange(data.totalMinPrice, data.totalMaxPrice)
+                                : "—"}
+                          </CostTotalValue>
+                        </CostTotal>
+                      </CostTotalWrap>
+                    </CostList>
 
-                <MutedNote>
-                  위 금액은 제출하신 사진을 기반으로 한 참고용 범위입니다. 실물 진단 결과에 따라 달라질 수 있습니다.
-                </MutedNote>
+                    <MutedNote>
+                      위 금액은 제출하신 사진을 기반으로 한 참고용 범위입니다. 실물 진단 결과에 따라 달라질 수 있습니다.
+                    </MutedNote>
+                  </>
+                )}
 
                 <NoteBlock>
                   <NoteBlockTitle>비용 산정 참고 안내</NoteBlockTitle>
@@ -510,13 +529,27 @@ const CostLabel = styled.p`
   color: #222;
 `;
 
-const CostValue = styled.p`
-  margin: 0;
+/** 금액 셀 — 추정가(굵게)와 범위(작게)를 세로로 쌓는다 */
+const CostValue = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+`;
+
+const CostPrimary = styled.span`
   font-family: "Noto Sans KR", "Pretendard", sans-serif;
   font-size: 13px;
   font-weight: 500;
   line-height: 19.5px;
   color: #222;
+`;
+
+const CostRange = styled.span`
+  font-family: "Noto Sans KR", "Pretendard", sans-serif;
+  font-size: 11px;
+  line-height: 16.5px;
+  color: #919191;
 `;
 
 const CostTotalWrap = styled.div`

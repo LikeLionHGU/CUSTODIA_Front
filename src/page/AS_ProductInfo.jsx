@@ -9,12 +9,14 @@ import { useApiQuery } from "../api/useApiQuery";
 import { toErrorMessage } from "../api/format";
 import backArrow from "../assets/icon_back_arrow.svg";
 import chevronDown from "../assets/icon_chevron_down.svg";
+import calendarIcon from "../assets/icon_calendar.svg";
 import cameraIcon from "../assets/icon_camera_small.svg";
 import removeIcon from "../assets/icon_remove.svg";
 import infoIcon from "../assets/icon_info.svg";
 
-// 명세 3-2: images 는 1~3장, 4장 이상이면 400 TOO_MANY_PHOTOS
-const MAX_PHOTOS = 3;
+// 명세 3-2: images 는 1~4장. 5장 이상이면 400 TOO_MANY_PHOTOS
+// 종류 조합도 강제된다 — PRODUCT 1장 이상 + DAMAGE 1장 이상 (400 PHOTO_TYPE_REQUIRED)
+const MAX_PHOTOS = 4;
 
 const PRODUCT_FIELDS = [
   {
@@ -179,8 +181,9 @@ export default function AS_ProductInfo() {
   const handleSubmit = async () => {
     if (submitting) return;
 
-    if (photos.length === 0) {
-      setSubmitError("손상 사진을 최소 1장 첨부해 주세요.");
+    // 첫 장이 PRODUCT 로 나가므로 최소 2장이어야 조합 제약을 만족한다
+    if (photos.length < 2) {
+      setSubmitError("전체 제품 사진 1장과 손상 부위 사진을 최소 1장 이상 첨부해 주세요.");
       return;
     }
 
@@ -521,6 +524,16 @@ const fieldBox = `
 
 const TextInput = styled.input`
   ${fieldBox}
+
+  /* type="date" 의 브라우저 기본 아이콘을 캘린더 아이콘으로 교체한다.
+     클릭 시 네이티브 날짜 선택기는 그대로 열린다. */
+  &::-webkit-calendar-picker-indicator {
+    width: 18px;
+    height: 18px;
+    /* data URI 안에 작은따옴표가 들어가므로 큰따옴표로 감싸야 파싱된다 */
+    background: url("${calendarIcon}") center / contain no-repeat;
+    cursor: pointer;
+  }
 `;
 
 const TextArea = styled.textarea`

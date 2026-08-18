@@ -334,9 +334,15 @@ export default function AS_MyDetail() {
     navigate("/my-as-list");
   };
 
-  // 명세 3-6: 이 버튼은 POST /api/consultation 에 asNo 를 담아 호출한다
+  // 명세 3-6: 이 버튼은 POST /api/chat 에 asNo 를 담아 호출한다
   const handleConsult = () => {
-    navigate("/ai-concierge", { state: { asNo: data?.asNo ?? asNo } });
+    navigate("/ai-concierge", {
+      state: {
+        asNo: data?.asNo ?? asNo,
+        modelName: data?.modelName,
+        statusLabel: data?.statusLabel,
+      },
+    });
   };
 
   return (

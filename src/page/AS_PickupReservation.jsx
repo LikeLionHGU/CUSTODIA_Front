@@ -3,6 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import * as pickup from "../api/pickup";
 import { useApiQuery } from "../api/useApiQuery";
 import { toErrorMessage } from "../api/format";
+import calendarIcon from "../assets/icon_calendar.svg";
+import safetyDriverId from "../assets/safety_driver_id.jpg";
+import safetyPhotoRecord from "../assets/safety_photo_record.jpg";
+import safetySignature from "../assets/safety_signature.jpg";
+import safetyInsurance from "../assets/safety_insurance.jpg";
 import styled from "styled-components";
 
 const WEEKDAYS_KO = ["일", "월", "화", "수", "목", "금", "토"];
@@ -22,11 +27,12 @@ function toDateKey(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+// 안전 인계 안내 카드. 이미지는 Figma export 원본을 그대로 쓴다.
 const SAFETY_ITEMS = [
-  { label: "기사 신원 확인" },
-  { label: "인계 전후 사진 기록" },
-  { label: "고객·기사 전자서명" },
-  { label: "운송 보험 자동 적용" },
+  { label: "기사 신원 확인", image: safetyDriverId },
+  { label: "인계 전후 사진 기록", image: safetyPhotoRecord },
+  { label: "고객·기사 전자서명", image: safetySignature },
+  { label: "운송 보험 자동 적용", image: safetyInsurance },
 ];
 
 function getTomorrow() {
@@ -73,7 +79,7 @@ const Page = styled.div`
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+  /* overflow: hidden 을 두면 RightColumn 의 position: sticky 가 동작하지 않는다 */
   box-sizing: border-box;
   text-align: left;
 `;
@@ -126,6 +132,14 @@ const RightColumn = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* 왼쪽 폼을 스크롤해도 예약 요약이 따라오도록 고정한다 (헤더 80px + 여백 16px) */
+  position: sticky;
+  top: 96px;
+
+  @media (max-width: 900px) {
+    position: static;
+    top: auto;
+  }
 `;
 
 const Card = styled.div`
@@ -275,6 +289,12 @@ const SelectBox = styled.button`
   cursor: pointer;
 `;
 
+const CalendarIcon = styled.img`
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+`;
+
 const ChevronWrap = styled.span`
   display: flex;
   flex-shrink: 0;
@@ -381,18 +401,13 @@ const SafetyItem = styled.div`
   align-items: flex-start;
 `;
 
-const SafetyImage = styled.div`
+const SafetyImage = styled.img`
   width: 100%;
-  height: 56px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f9fafb;
-  border: 1px dashed #d1d5db;
+  height: 96px;
+  object-fit: cover;
+  display: block;
   border-radius: 6px;
-  font-size: 11px;
-  color: #9ca3af;
+  background: #f0f0f0;
 `;
 
 const SafetyLabel = styled.p`
@@ -502,6 +517,11 @@ export default function AS_PickupReservation() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [calendarOpen]);
 
+  // 명세 4-1: phone 은 회원 연락처 기본값. 사용자가 아직 손대지 않았을 때만 채운다.
+  useEffect(() => {
+    if (form?.phone) setPhone((prev) => (prev ? prev : formatPhoneNumber(form.phone)));
+  }, [form]);
+
   const calendarDays = useMemo(() => buildCalendarDays(calendarMonth), [calendarMonth]);
 
   // 명세 4-2: 예약 가능 슬롯. startDate 생략 시 오늘, endDate 생략 시 +14일
@@ -540,8 +560,9 @@ export default function AS_PickupReservation() {
   };
 
   const phoneDigits = phone.replace(/\D/g, "");
-  const isFormValid =
-    !!pickupDate && !!pickupTime && phoneDigits.length >= 10 && address.trim() !== "" && !submitting;
+  // 픽업 날짜 · 픽업 시간대 · 수거 주소가 모두 채워지면 '예약 확정하기'가 활성화된다.
+  // 전화번호는 GET /pickup/form 의 회원 연락처로 미리 채워지므로 활성화 조건에서 제외한다.
+  const isFormValid = !!pickupDate && !!pickupTime && address.trim() !== "" && !submitting;
 
   // 명세 4-3: 예약 확정. slotEnd 는 서버가 슬롯 마스터에서 가져오므로 보내지 않는다.
   const handleConfirm = async () => {
@@ -598,7 +619,7 @@ export default function AS_PickupReservation() {
                     onClick={() => setCalendarOpen((prev) => !prev)}
                   >
                     {pickupDate ? formatDateKorean(pickupDate) : "날짜 선택"}
-                    <ChevronIcon />
+                    <CalendarIcon src={calendarIcon} alt="" />
                   </SelectBox>
 
                   {calendarOpen && (
@@ -707,7 +728,7 @@ export default function AS_PickupReservation() {
                 <SafetyGrid>
                   {SAFETY_ITEMS.map((item) => (
                     <SafetyItem key={item.label}>
-                      <SafetyImage>Image</SafetyImage>
+                      <SafetyImage src={item.image} alt="" />
                       <SafetyLabel>{item.label}</SafetyLabel>
                     </SafetyItem>
                   ))}
