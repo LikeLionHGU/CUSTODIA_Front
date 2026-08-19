@@ -1,4 +1,4 @@
-# MCM 케어 (CUSTODIA Care)
+# CUSTODIA 케어 (MCM Care)
 
 MCM 애프터서비스(A/S) 프론트엔드. 제품 등록 → AI 손상 분석·예상 견적 → 픽업 예약 → 수선 진행 조회까지의 흐름을 다룬다.
 React 19 + Vite + styled-components 로 만들었고, 한국어·영어·독일어를 지원한다.
@@ -19,13 +19,13 @@ npm run preview  # 빌드 결과 미리보기
 ## 배포 (GitHub Pages)
 
 `main` 에 푸시하면 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) 이 빌드해서 Pages 로 올린다.
-배포 주소는 `https://likelionhgu.github.io/MCMcare_Front/` 이다.
+배포 주소는 `https://likelionhgu.github.io/CUSTODIA_Front/` 이다.
 
 처음 한 번은 저장소에서 아래를 설정해야 한다.
 
 1. **Settings → Pages → Source** 를 `GitHub Actions` 로 바꾼다.
 2. **Settings → Pages → Custom domain** 을 비운다.
-   커스텀 도메인이 설정돼 있으면 `likelionhgu.github.io/MCMcare_Front/` 는 404 가 나고
+   커스텀 도메인이 설정돼 있으면 `likelionhgu.github.io/CUSTODIA_Front/` 는 404 가 나고
    소유하지 않은 도메인으로만 배포를 시도한다.
 3. **Settings → Secrets and variables → Actions → Variables** 에 `VITE_API_BASE_URL` 을 백엔드 절대주소로 추가한다.
    (예: `https://api.example.com/api`)

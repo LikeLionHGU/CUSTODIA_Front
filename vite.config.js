@@ -6,12 +6,12 @@ import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 
 // GitHub Pages 프로젝트 페이지는 저장소 이름이 경로에 붙는다.
-// (https://likelionhgu.github.io/MCMcare_Front/)
+// (https://likelionhgu.github.io/CUSTODIA_Front/)
 // 커스텀 도메인을 쓰면 루트가 되므로, 배포 워크플로가 actions/configure-pages 로
 // 실제 경로를 받아 VITE_BASE_PATH 로 넘겨준다. 값이 없을 때만 아래 기본값을 쓴다.
-const DEFAULT_BASE_PATH = '/MCMcare_Front/'
+const DEFAULT_BASE_PATH = '/CUSTODIA_Front/'
 
-/** 앞뒤 슬래시를 맞춘다. configure-pages 는 '/MCMcare_Front' 처럼 끝 슬래시 없이 준다. */
+/** 앞뒤 슬래시를 맞춘다. configure-pages 는 '/CUSTODIA_Front' 처럼 끝 슬래시 없이 준다. */
 function normalizeBasePath(value) {
   if (!value) return DEFAULT_BASE_PATH
   const withLeading = value.startsWith('/') ? value : `/${value}`
