@@ -6,8 +6,11 @@ import AgentContactModal from "../components/AgentContactModal";
 import * as chat from "../api/chat";
 import { useApiQuery } from "../api/useApiQuery";
 import { toErrorMessage } from "../api/format";
+import { useT } from "../i18n";
+import { revealOnMount } from "../css/motion";
 
 export default function AS_AiConcierge() {
+  const t = useT();
   const location = useLocation();
   // 711에서 넘어오면 asNo 가 있고, 718(이력 없음)에서 오면 없다 — 명세 6-2
   const asNo = location.state?.asNo;
@@ -49,7 +52,7 @@ export default function AS_AiConcierge() {
       const reply = await chat.sendMessage(content, asNo);
       setMessages((prev) => [...prev, { role: "AI", content: reply.answer }]);
     } catch (err) {
-      setSendError(toErrorMessage(err, "메시지를 보내지 못했습니다."));
+      setSendError(t(toErrorMessage(err, "메시지를 보내지 못했습니다.")));
     } finally {
       setSending(false);
     }
@@ -62,9 +65,9 @@ export default function AS_AiConcierge() {
     <Page>
       <Body>
         <TitleRow>
-          <PageTitle>AI 컨시어지 상담</PageTitle>
+          <PageTitle>{t("AI 컨시어지 상담")}</PageTitle>
           <Button type="button" onClick={handleHandoff}>
-            상담원 연결
+            {t("상담원 연결")}
           </Button>
         </TitleRow>
 
@@ -72,15 +75,17 @@ export default function AS_AiConcierge() {
           <CaseStrip>
             {caseInfo.map((item) => (
               <CaseField key={item.label}>
-                <CaseLabel>{item.label}</CaseLabel>
-                <CaseValue>{item.value}</CaseValue>
+                <CaseLabel>{t(item.label)}</CaseLabel>
+                <CaseValue>{t(item.value)}</CaseValue>
               </CaseField>
             ))}
           </CaseStrip>
 
           <ChatBox>
-            {loading && <StateText>상담을 준비하는 중…</StateText>}
-            {!loading && error && <StateText>{toErrorMessage(error, "상담을 시작하지 못했습니다.")}</StateText>}
+            {loading && <StateText>{t("상담을 준비하는 중…")}</StateText>}
+            {!loading && error && (
+              <StateText>{t(toErrorMessage(error, "상담을 시작하지 못했습니다."))}</StateText>
+            )}
 
             {messages.map((message, index) =>
               message.role === "AI" ? (
@@ -95,7 +100,7 @@ export default function AS_AiConcierge() {
               ),
             )}
 
-            {sending && <StateText>AI가 답변을 작성하는 중…</StateText>}
+            {sending && <StateText>{t("AI가 답변을 작성하는 중…")}</StateText>}
             {sendError && <StateText>{sendError}</StateText>}
           </ChatBox>
 
@@ -103,15 +108,17 @@ export default function AS_AiConcierge() {
             <ComposerInput
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="궁금하신 내용을 입력해 주세요"
+              placeholder={t("궁금하신 내용을 입력해 주세요")}
               rows={3}
             />
             <ComposerFooter>
               <ComposerNote>
-                AI 안내는 참고용이며, 최종 수선 가능 여부 및 비용 확정은 실물 진단 또는 상담원을 통해 진행됩니다.
+                {t(
+                  "AI 안내는 참고용이며, 최종 수선 가능 여부 및 비용 확정은 실물 진단 또는 상담원을 통해 진행됩니다.",
+                )}
               </ComposerNote>
               <Button type="button" disabled={!canSend} onClick={handleSend}>
-                전송
+                {t("전송")}
               </Button>
             </ComposerFooter>
           </Composer>
@@ -220,6 +227,7 @@ const ChatBox = styled.div`
 `;
 
 const StateText = styled.p`
+  ${revealOnMount}
   width: 100%;
   margin: 0;
   font-size: 13px;
@@ -228,6 +236,7 @@ const StateText = styled.p`
 `;
 
 const AiRow = styled.div`
+  ${revealOnMount}
   width: 100%;
   display: flex;
   align-items: flex-start;
@@ -257,6 +266,7 @@ const AiBubble = styled.p`
 `;
 
 const UserRow = styled.div`
+  ${revealOnMount}
   width: 100%;
   display: flex;
   align-items: flex-start;

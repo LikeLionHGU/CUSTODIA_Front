@@ -1,5 +1,14 @@
-// API 응답의 날짜 문자열을 화면 표기로 바꾸는 헬퍼.
+// API 응답의 날짜·금액을 화면 표기로 바꾸는 헬퍼.
 // 서버는 `2025-08-04` (LocalDate) 또는 `2024-11-20T14:32:00` (LocalDateTime) 을 준다.
+
+// 현재 화면 언어. LanguageProvider 가 자식을 그리기 직전에 맞춰 준다.
+// (훅으로 만들면 모든 호출부를 컴포넌트 안으로 옮겨야 해서 모듈 상태로 둔다)
+const INTL_LOCALE = { ko: "ko-KR", en: "en-US", de: "de-DE" };
+let currentLocale = INTL_LOCALE.ko;
+
+export function setFormatLocale(lang) {
+  currentLocale = INTL_LOCALE[lang] ?? INTL_LOCALE.ko;
+}
 
 function toParts(value) {
   if (!value) return null;
@@ -9,11 +18,16 @@ function toParts(value) {
   return { year, month, day };
 }
 
-/** `2025-08-04` → `2025년 8월 4일` */
+/** `2025-08-04` → `2025년 8월 4일` · `August 4, 2025` · `4. August 2025` */
 export function formatKoreanDate(value) {
   const parts = toParts(value);
   if (!parts) return "";
-  return `${parts.year}년 ${parts.month}월 ${parts.day}일`;
+
+  return new Intl.DateTimeFormat(currentLocale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(new Date(parts.year, parts.month - 1, parts.day));
 }
 
 /** `2025-08-04` → `2025.08.04` */
@@ -24,7 +38,7 @@ export function formatDotDate(value) {
   return `${parts.year}.${pad(parts.month)}.${pad(parts.day)}`;
 }
 
-/** `2024-11-20T14:32:00` → `2024년 11월 20일 14:32` */
+/** `2024-11-20T14:32:00` → `2024년 11월 20일 14:32` (날짜 부분만 언어를 따른다) */
 export function formatKoreanDateTime(value) {
   const parts = toParts(value);
   if (!parts) return "";
@@ -36,10 +50,10 @@ export function formatKoreanDateTime(value) {
   return `${formatKoreanDate(value)} ${hour}:${minute}`;
 }
 
-/** `80000` → `₩ 80,000` */
+/** `80000` → `₩ 80,000` (자릿수 구분 기호는 언어를 따른다) */
 export function formatWon(value) {
   if (value == null) return "";
-  return `₩ ${Number(value).toLocaleString("ko-KR")}`;
+  return `₩ ${Number(value).toLocaleString(currentLocale)}`;
 }
 
 /** `80000`, `120000` → `₩ 80,000 – ₩ 120,000` */
@@ -55,5 +69,13 @@ export function toErrorMessage(error, fallback = "정보를 불러오지 못했�
   if (error.code === "NO_MATCHING_DATA") return "요청하신 정보를 찾을 수 없습니다.";
   if (error.code === "NO_PERMISSION") return "접근 권한이 없습니다.";
   if (error.status === 401) return "로그인이 필요합니다.";
+
+  // fetch 자체가 실패하면(서버 다운·네트워크 차단·CORS) ApiError 가 아니라 TypeError 가 온다
+  if (error.name === "TypeError") return "서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+
+  // ApiError 의 message 는 서버가 문구를 안 줬을 때 "HTTP 404" 같은 내부 표기로 채워진다.
+  // 백엔드에 닿지 못한 배포본에서 그게 그대로 노출되지 않도록, 서버가 준 문구만 그대로 쓴다.
+  if (error.name === "ApiError") return error.body?.message || fallback;
+
   return error.message || fallback;
 }

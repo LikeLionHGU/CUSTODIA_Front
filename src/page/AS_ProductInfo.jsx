@@ -7,6 +7,7 @@ import * as asCase from "../api/asCase";
 import * as product from "../api/product";
 import { useApiQuery } from "../api/useApiQuery";
 import { toErrorMessage } from "../api/format";
+import { useT } from "../i18n";
 import backArrow from "../assets/icon_back_arrow.svg";
 import chevronDown from "../assets/icon_chevron_down.svg";
 import calendarIcon from "../assets/icon_calendar.svg";
@@ -61,17 +62,19 @@ function getTodayDateString() {
   return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 }
 
-function FormField({ label, type, options, placeholder, value, onChange, onBlur, max, full }) {
-  const fieldId = `field-${label}`;
+function FormField({ name, label, type, options, placeholder, value, onChange, onBlur, max, full }) {
+  const t = useT();
+  // 언어가 바뀌어도 id 가 흔들리지 않도록 라벨 대신 필드 키를 쓴다
+  const fieldId = `field-${name}`;
 
   return (
     <FieldGroup $full={full}>
-      <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
+      <FieldLabel htmlFor={fieldId}>{t(label)}</FieldLabel>
       {type === "text" && (
         <TextInput
           id={fieldId}
           type="text"
-          placeholder={placeholder}
+          placeholder={t(placeholder)}
           value={value}
           onChange={onChange}
           onBlur={onBlur}
@@ -81,17 +84,17 @@ function FormField({ label, type, options, placeholder, value, onChange, onBlur,
         <TextInput id={fieldId} type="date" value={value} onChange={onChange} max={max} />
       )}
       {type === "area" && (
-        <TextArea id={fieldId} placeholder={placeholder} value={value} onChange={onChange} />
+        <TextArea id={fieldId} placeholder={t(placeholder)} value={value} onChange={onChange} />
       )}
       {type === "select" && (
         <SelectWrapper>
           <Select id={fieldId} value={value} onChange={onChange} $hasValue={!!value}>
             <option value="" disabled hidden>
-              선택
+              {t("선택")}
             </option>
             {(options ?? []).map((option) => (
               <option key={option.code} value={option.code}>
-                {option.label}
+                {t(option.label)}
               </option>
             ))}
           </Select>
@@ -104,6 +107,7 @@ function FormField({ label, type, options, placeholder, value, onChange, onBlur,
 
 export default function AS_ProductInfo() {
   const navigate = useNavigate();
+  const t = useT();
   const fileInputRef = useRef(null);
   const todayDateString = getTodayDateString();
 
@@ -183,7 +187,7 @@ export default function AS_ProductInfo() {
 
     // 첫 장이 PRODUCT 로 나가므로 최소 2장이어야 조합 제약을 만족한다
     if (photos.length < 2) {
-      setSubmitError("전체 제품 사진 1장과 손상 부위 사진을 최소 1장 이상 첨부해 주세요.");
+      setSubmitError(t("전체 제품 사진 1장과 손상 부위 사진을 최소 1장 이상 첨부해 주세요."));
       return;
     }
 
@@ -206,7 +210,7 @@ export default function AS_ProductInfo() {
         navigate("/ai-estimate", { state: { asNo: failedAsNo } });
         return;
       }
-      setSubmitError(toErrorMessage(err, "접수에 실패했습니다. 잠시 후 다시 시도해 주세요."));
+      setSubmitError(t(toErrorMessage(err, "접수에 실패했습니다. 잠시 후 다시 시도해 주세요.")));
     } finally {
       setSubmitting(false);
     }
@@ -217,16 +221,16 @@ export default function AS_ProductInfo() {
       <Body>
         <BackLink type="button" onClick={() => navigate("/")}>
           <BackArrow src={backArrow} alt="" />
-          홈화면으로
+          {t("홈화면으로")}
         </BackLink>
 
         <TopRow>
           <TopLeft>
-            <PageTitle>제품 정보 입력</PageTitle>
+            <PageTitle>{t("제품 정보 입력")}</PageTitle>
             <StepIndicator current={1} />
           </TopLeft>
           <Button type="button" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "접수 중…" : "예상 견적 확인하기"}
+            {submitting ? t("접수 중…") : t("예상 견적 확인하기")}
           </Button>
         </TopRow>
 
@@ -234,13 +238,14 @@ export default function AS_ProductInfo() {
           <LeftColumn>
             <Card>
               <CardHeader>
-                <CardHeaderInner>제품 정보</CardHeaderInner>
+                <CardHeaderInner>{t("제품 정보")}</CardHeaderInner>
               </CardHeader>
               <CardBody>
                 <FieldGrid>
                   {PRODUCT_FIELDS.map((field) => (
                     <FormField
                       key={field.key}
+                      name={field.key}
                       label={field.label}
                       type={field.type}
                       options={field.optionKey ? form?.[field.optionKey] : undefined}
@@ -258,13 +263,14 @@ export default function AS_ProductInfo() {
 
             <Card>
               <CardHeader>
-                <CardHeaderInner>손상 설명</CardHeaderInner>
+                <CardHeaderInner>{t("손상 설명")}</CardHeaderInner>
               </CardHeader>
               <CardBody>
                 <FieldGrid>
                   {DAMAGE_FIELDS.map((field) => (
                     <FormField
                       key={field.key}
+                      name={field.key}
                       label={field.label}
                       type={field.type}
                       options={field.optionKey ? form?.[field.optionKey] : undefined}
@@ -281,10 +287,10 @@ export default function AS_ProductInfo() {
 
           <RightColumn>
             <Card>
-              <UploadHeader>손상 사진 업로드</UploadHeader>
+              <UploadHeader>{t("손상 사진 업로드")}</UploadHeader>
               <UploadBody>
                 <UploadNote>
-                  전체 제품 사진 1장과 손상 부위 사진을 최소 1장 이상 첨부해 주세요.
+                  {t("전체 제품 사진 1장과 손상 부위 사진을 최소 1장 이상 첨부해 주세요.")}
                 </UploadNote>
 
                 <PhotoRow>
@@ -301,11 +307,11 @@ export default function AS_ProductInfo() {
 
                   {photos.map((photo) => (
                     <PhotoTile key={photo.id}>
-                      <PhotoImg src={photo.url} alt="손상 사진" />
+                      <PhotoImg src={photo.url} alt={t("손상 사진")} />
                       <RemoveButton
                         type="button"
                         onClick={() => handleRemovePhoto(photo.id)}
-                        aria-label="사진 삭제"
+                        aria-label={t("사진 삭제")}
                       >
                         <RemoveIcon src={removeIcon} alt="" />
                       </RemoveButton>
@@ -321,17 +327,17 @@ export default function AS_ProductInfo() {
                   onChange={handleFileChange}
                 />
 
-                <UploadGuideLink type="button">추가 사진 요청 안내 확인</UploadGuideLink>
+                <UploadGuideLink type="button">{t("추가 사진 요청 안내 확인")}</UploadGuideLink>
               </UploadBody>
             </Card>
 
             <InfoPanel>
               <InfoIcon src={infoIcon} alt="" />
               <InfoBody>
-                <InfoTitle>예상 견적 안내</InfoTitle>
+                <InfoTitle>{t("예상 견적 안내")}</InfoTitle>
                 <InfoList>
                   {ESTIMATE_NOTES.map((note) => (
-                    <InfoListItem key={note}>{note}</InfoListItem>
+                    <InfoListItem key={note}>{t(note)}</InfoListItem>
                   ))}
                 </InfoList>
               </InfoBody>
@@ -340,7 +346,7 @@ export default function AS_ProductInfo() {
         </Columns>
 
         {(submitError || formError) && (
-          <SubmitError role="alert">{submitError || toErrorMessage(formError)}</SubmitError>
+          <SubmitError role="alert">{submitError || t(toErrorMessage(formError))}</SubmitError>
         )}
       </Body>
     </Page>
@@ -451,7 +457,7 @@ const Card = styled.div`
   overflow: hidden;
   background: #fff;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
 `;
 
 const CardHeader = styled.div`
@@ -505,31 +511,58 @@ const FieldLabel = styled.label`
   color: #313131;
 `;
 
+/**
+ * 텍스트·날짜·셀렉트·textarea 가 공유하는 컨트롤 스타일.
+ * 높이(--control-height)·여백·테두리·포커스 링을 여기서만 정하므로
+ * 어떤 타입이든 같은 크기와 같은 모서리로 보인다.
+ */
 const fieldBox = `
   width: 100%;
+  min-height: var(--control-height);
   box-sizing: border-box;
-  padding: 14px 12px;
+  padding: 11px 14px;
   background: #fff;
-  border: 1px solid #c4c4c4;
-  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius-control);
   font-size: 12px;
-  line-height: 12px;
+  line-height: 20px;
   color: #222;
   font-family: inherit;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 
   &::placeholder {
     color: #919191;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #919191;
+  }
+
+  &:focus {
+    border-color: #222;
+    box-shadow: 0 0 0 3px rgba(34, 34, 34, 0.08);
+  }
+
+  &:disabled {
+    background: #f0f0f0;
+    color: #919191;
+    cursor: not-allowed;
   }
 `;
 
 const TextInput = styled.input`
   ${fieldBox}
+  /* date 는 크롬 내부 높이가 더 커서 min-height 만으로는 2px 어긋난다 — 높이를 고정한다 */
+  height: var(--control-height);
 
   /* type="date" 의 브라우저 기본 아이콘을 캘린더 아이콘으로 교체한다.
      클릭 시 네이티브 날짜 선택기는 그대로 열린다. */
   &::-webkit-calendar-picker-indicator {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     /* data URI 안에 작은따옴표가 들어가므로 큰따옴표로 감싸야 파싱된다 */
     background: url("${calendarIcon}") center / contain no-repeat;
     cursor: pointer;
@@ -538,8 +571,7 @@ const TextInput = styled.input`
 
 const TextArea = styled.textarea`
   ${fieldBox}
-  height: 100px;
-  line-height: 18px;
+  min-height: 112px;
   resize: vertical;
 `;
 
@@ -550,7 +582,8 @@ const SelectWrapper = styled.div`
 
 const Select = styled.select`
   ${fieldBox}
-  padding-right: 34px;
+  height: var(--control-height);
+  padding-right: 36px;
   appearance: none;
   color: ${(props) => (props.$hasValue ? "#222" : "#919191")};
 `;
@@ -558,7 +591,7 @@ const Select = styled.select`
 const SelectChevron = styled.img`
   position: absolute;
   top: 50%;
-  right: 12px;
+  right: 14px;
   width: 10px;
   height: 6px;
   transform: translateY(-50%);
@@ -618,8 +651,16 @@ const UploadTile = styled.button`
   padding: 0;
   background: #f0f0f0;
   border: 1px dashed #919191;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: #222;
+    background: #ebebeb;
+  }
 
   &:disabled {
     cursor: default;
@@ -644,7 +685,7 @@ const PhotoTile = styled.div`
   width: 88px;
   height: 88px;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
 `;
 
 const PhotoImg = styled.img`
@@ -666,7 +707,7 @@ const RemoveButton = styled.button`
   padding: 0;
   background: rgba(0, 0, 0, 0.6);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
 `;
 
@@ -700,7 +741,7 @@ const InfoPanel = styled.div`
   gap: 8px;
   padding: 24px;
   background: #313131;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
 `;
 
 const InfoIcon = styled.img`

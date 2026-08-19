@@ -3,6 +3,8 @@ import styled from "styled-components";
 import * as asCaseApi from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
 import { formatKoreanDate, formatKoreanDateTime, toErrorMessage } from "../api/format";
+import { useT } from "../i18n";
+import { reveal } from "../css/motion";
 
 const LOCATION_NOTICE = {
   title: "정보 미확정 안내",
@@ -15,9 +17,9 @@ function timelineIcon(step, isCurrent) {
   return isCurrent ? "→" : "✓";
 }
 
-function timelineDesc(step) {
-  if (!step.completed) return `예정 · ${step.description}`;
-  return [formatKoreanDate(step.occurredAt), step.description].filter(Boolean).join(" · ");
+function timelineDesc(step, t) {
+  if (!step.completed) return t("예정 · {description}", { description: t(step.description) });
+  return [formatKoreanDate(step.occurredAt), t(step.description)].filter(Boolean).join(" · ");
 }
 
 const Page = styled.div`
@@ -116,6 +118,7 @@ const StateText = styled.p`
 `;
 
 const Columns = styled.div`
+  ${reveal}
   width: 100%;
   display: flex;
   flex-wrap: wrap;
@@ -313,6 +316,7 @@ const ConsultButtonRow = styled.div`
 `;
 
 export default function AS_MyDetail() {
+  const t = useT();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -351,59 +355,59 @@ export default function AS_MyDetail() {
         <Body>
           <TitleRow>
             <TitleCol>
-              <SectionTitle>리페어 패스포트 상세</SectionTitle>
-              <SectionSubTitle>AS 번호 · 제품명 · 현재 상태를 확인하세요</SectionSubTitle>
+              <SectionTitle>{t("리페어 패스포트 상세")}</SectionTitle>
+              <SectionSubTitle>{t("AS 번호 · 제품명 · 현재 상태를 확인하세요")}</SectionSubTitle>
             </TitleCol>
             <Spacer />
             <LinkButton type="button" onClick={handleGoToList}>
-              AS 건 목록으로
+              {t("AS 건 목록으로")}
             </LinkButton>
             <PrimaryButton type="button" onClick={handleConsult}>
-              이 AS 건 상담하기
+              {t("이 AS 건 상담하기")}
             </PrimaryButton>
           </TitleRow>
 
-          {loading && <StateText>불러오는 중…</StateText>}
-          {!loading && error && <StateText>{toErrorMessage(error)}</StateText>}
+          {loading && <StateText>{t("불러오는 중…")}</StateText>}
+          {!loading && error && <StateText>{t(toErrorMessage(error))}</StateText>}
 
-          <Columns>
+          <Columns $pending={loading}>
             <LeftColumn>
               <Card>
-                <CardTitle>접수 건 식별 정보</CardTitle>
+                <CardTitle>{t("접수 건 식별 정보")}</CardTitle>
                 <InfoRows>
                   <InfoRow>
-                    <InfoLabel>AS 번호</InfoLabel>
+                    <InfoLabel>{t("AS 번호")}</InfoLabel>
                     <Spacer />
                     <InfoValue>{data?.asNo ?? asNo ?? "—"}</InfoValue>
                   </InfoRow>
                   <InfoRow>
-                    <InfoLabel>제품명</InfoLabel>
+                    <InfoLabel>{t("제품명")}</InfoLabel>
                     <Spacer />
                     <InfoValue>{data?.modelName ?? "—"}</InfoValue>
                   </InfoRow>
                   <InfoRow>
-                    <InfoLabel>접수일</InfoLabel>
+                    <InfoLabel>{t("접수일")}</InfoLabel>
                     <Spacer />
                     <InfoValue>{data?.createdAt ? formatKoreanDate(data.createdAt) : "—"}</InfoValue>
                   </InfoRow>
                   <InfoRow>
-                    <InfoLabel>접수 유형</InfoLabel>
+                    <InfoLabel>{t("접수 유형")}</InfoLabel>
                     <Spacer />
-                    <InfoValue>{data?.intakeType ?? "—"}</InfoValue>
+                    <InfoValue>{t(data?.intakeType) ?? "—"}</InfoValue>
                   </InfoRow>
                 </InfoRows>
               </Card>
 
               <Card>
-                <CardTitle>현재 처리 단계</CardTitle>
+                <CardTitle>{t("현재 처리 단계")}</CardTitle>
                 <InfoRows>
                   <InfoRow>
-                    <InfoLabel>현재 단계</InfoLabel>
+                    <InfoLabel>{t("현재 단계")}</InfoLabel>
                     <Spacer />
-                    <Chip>{data?.statusLabel ?? "—"}</Chip>
+                    <Chip>{t(data?.statusLabel) ?? "—"}</Chip>
                   </InfoRow>
                   <InfoRow>
-                    <InfoLabel>최신 상태 업데이트</InfoLabel>
+                    <InfoLabel>{t("최신 상태 업데이트")}</InfoLabel>
                     <Spacer />
                     <InfoValue>{data?.statusUpdatedAt ? formatKoreanDateTime(data.statusUpdatedAt) : "—"}</InfoValue>
                   </InfoRow>
@@ -412,67 +416,67 @@ export default function AS_MyDetail() {
                   </ProgressTrack>
                 </InfoRows>
                 <MessageCol>
-                  <InfoLabel>최신 상태 메시지</InfoLabel>
-                  <NoticeBodySmall>{data?.statusMessage ?? "—"}</NoticeBodySmall>
+                  <InfoLabel>{t("최신 상태 메시지")}</InfoLabel>
+                  <NoticeBodySmall>{t(data?.statusMessage) ?? "—"}</NoticeBodySmall>
                 </MessageCol>
               </Card>
 
               <Card>
-                <CardTitle>예상 완료일</CardTitle>
+                <CardTitle>{t("예상 완료일")}</CardTitle>
                 <InfoRows>
                   <InfoRow>
-                    <InfoLabel>예상 완료일</InfoLabel>
+                    <InfoLabel>{t("예상 완료일")}</InfoLabel>
                     <Spacer />
                     <InfoValue>{data?.expectedCompletedAt ? formatKoreanDate(data.expectedCompletedAt) : "—"}</InfoValue>
                   </InfoRow>
                   <InfoRow>
-                    <InfoLabel>최종 갱신</InfoLabel>
+                    <InfoLabel>{t("최종 갱신")}</InfoLabel>
                     <Spacer />
                     <InfoValue>{data?.expectedUpdatedAt ? formatKoreanDate(data.expectedUpdatedAt) : "—"}</InfoValue>
                   </InfoRow>
                   <NoticeCard>
-                    <NoticeTitle>일정 변동 안내</NoticeTitle>
-                    <NoticeBody>{data?.delayReason ?? "현재 안내된 일정 변동 사항이 없습니다."}</NoticeBody>
+                    <NoticeTitle>{t("일정 변동 안내")}</NoticeTitle>
+                    <NoticeBody>{t(data?.delayReason ?? "현재 안내된 일정 변동 사항이 없습니다.")}</NoticeBody>
                   </NoticeCard>
                 </InfoRows>
               </Card>
 
               <Card>
-                <CardTitle>위치 및 현황</CardTitle>
+                <CardTitle>{t("위치 및 현황")}</CardTitle>
                 <InfoRows>
                   <InfoRow>
-                    <InfoLabel>현재 위치</InfoLabel>
+                    <InfoLabel>{t("현재 위치")}</InfoLabel>
                     <Spacer />
-                    <InfoValue>{data?.currentLocation ?? "—"}</InfoValue>
+                    <InfoValue>{t(data?.currentLocation) ?? "—"}</InfoValue>
                   </InfoRow>
                   <InfoRow>
-                    <InfoLabel>위치 유형</InfoLabel>
+                    <InfoLabel>{t("위치 유형")}</InfoLabel>
                     <Spacer />
-                    <Chip>{data?.locationType ?? "—"}</Chip>
+                    <Chip>{t(data?.locationType) ?? "—"}</Chip>
                   </InfoRow>
                   <InfoRow>
-                    <InfoLabel>위치 상태</InfoLabel>
+                    <InfoLabel>{t("위치 상태")}</InfoLabel>
                     <Spacer />
-                    <InfoValue>{data?.locationStatus ?? "—"}</InfoValue>
+                    <InfoValue>{t(data?.locationStatus) ?? "—"}</InfoValue>
                   </InfoRow>
                 </InfoRows>
                 <MessageCol>
-                  <InfoLabel>{LOCATION_NOTICE.title}</InfoLabel>
-                  <NoticeBody>{LOCATION_NOTICE.body}</NoticeBody>
+                  <InfoLabel>{t(LOCATION_NOTICE.title)}</InfoLabel>
+                  <NoticeBody>{t(LOCATION_NOTICE.body)}</NoticeBody>
                 </MessageCol>
               </Card>
             </LeftColumn>
 
             <RightColumn>
               <Card>
-                <CardTitle>수선 진행 이력</CardTitle>
+                <CardTitle>{t("수선 진행 이력")}</CardTitle>
                 <TimelineList>
                   {historyList.map((step, index) => (
                     <TimelineRow key={step.status} $dimmed={!step.completed}>
                       <TimelineIcon>{timelineIcon(step, index === currentIndex)}</TimelineIcon>
                       <TimelineInfo>
-                        <TimelineTitle>{step.statusLabel}</TimelineTitle>
-                        <TimelineDesc>{timelineDesc(step)}</TimelineDesc>
+                        <TimelineTitle>{t(step.statusLabel)}</TimelineTitle>
+                        <TimelineDesc>{timelineDesc(step, t)}</TimelineDesc>
                       </TimelineInfo>
                     </TimelineRow>
                   ))}
@@ -480,16 +484,17 @@ export default function AS_MyDetail() {
               </Card>
 
               <Card>
-                <CardTitle>상담 연결 안내</CardTitle>
+                <CardTitle>{t("상담 연결 안내")}</CardTitle>
                 <ConsultBody>
-                  <ConsultText>이 AS 건에 대해 궁금한 점이 있으신가요?</ConsultText>
+                  <ConsultText>{t("이 AS 건에 대해 궁금한 점이 있으신가요?")}</ConsultText>
                   <ConsultText>
-                    AI 컨시어지 또는 상담원이 접수 이력과 수선 진행 기록을 공유하여 반복 설명 없이 문의를
-                    이어갑니다.
+                    {t(
+                      "AI 컨시어지 또는 상담원이 접수 이력과 수선 진행 기록을 공유하여 반복 설명 없이 문의를 이어갑니다.",
+                    )}
                   </ConsultText>
                   <ConsultButtonRow>
                     <PrimaryButton type="button" onClick={handleConsult}>
-                      이 AS 건 상담하기
+                      {t("이 AS 건 상담하기")}
                     </PrimaryButton>
                   </ConsultButtonRow>
                 </ConsultBody>

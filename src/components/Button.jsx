@@ -19,7 +19,7 @@ const StyledButton = styled.button`
   align-items: center;
   justify-content: center;
   padding: ${(props) => (props.$size === "big" ? "16px 32px" : "12px 24px")};
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   font-family: "Noto Sans KR", "Pretendard", sans-serif;
   font-size: 12px;
   font-weight: 700;

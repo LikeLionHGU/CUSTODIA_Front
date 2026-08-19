@@ -4,9 +4,11 @@ import Button from "../components/Button";
 import StepIndicator from "../components/StepIndicator";
 import * as pickup from "../api/pickup";
 import { useApiQuery } from "../api/useApiQuery";
-import { formatKoreanDate, toErrorMessage } from "../api/format";
+import { formatKoreanDate, formatWon, toErrorMessage } from "../api/format";
 import backArrow from "../assets/icon_back_arrow.svg";
 import checkIcon from "../assets/icon_step_check.svg";
+import { useT } from "../i18n";
+import { reveal } from "../css/motion";
 
 const WEEKDAYS_KO = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -20,17 +22,18 @@ const PREPARATION_NOTES = [
 const INSURANCE_NOTE =
   "운송 중 발생하는 분실·파손에 대해 보험이 적용됩니다. 인계 전후 제품 상태 사진과 전자서명이 기록되어 분쟁 발생 시 참고 자료로 활용됩니다.";
 
-/** `2025-06-18` + 슬롯 → `2025년 6월 18일 (수) 10:00 – 12:00` */
-function formatSchedule(data) {
+/** `2025-06-18` + 슬롯 → `2025년 6월 18일 (수) 10:00 – 12:00` (요일·날짜는 언어를 따른다) */
+function formatSchedule(data, t) {
   if (!data?.pickupDate) return "—";
 
   const [year, month, day] = data.pickupDate.split("-").map(Number);
-  const weekday = WEEKDAYS_KO[new Date(year, month - 1, day).getDay()];
+  const weekday = t(WEEKDAYS_KO[new Date(year, month - 1, day).getDay()]);
   const time = [data.slotStart, data.slotEnd].filter(Boolean).join(" – ");
   return `${formatKoreanDate(data.pickupDate)} (${weekday}) ${time}`.trim();
 }
 
 export default function AS_ReservationComplete() {
+  const t = useT();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -45,7 +48,7 @@ export default function AS_ReservationComplete() {
 
   const reservationRows = [
     { label: "예약 번호", value: data?.pickupNo ?? pickupNo ?? "—" },
-    { label: "픽업 일정", value: formatSchedule(data) },
+    { label: "픽업 일정", value: formatSchedule(data, t) },
     {
       label: "수거 장소",
       value: data ? [data.address, data.addressDetail].filter(Boolean).join(", ") : "—",
@@ -63,8 +66,12 @@ export default function AS_ReservationComplete() {
     { label: "보험 적용", value: data?.insuranceApplied ? "적용됨" : "미적용" },
     {
       label: "보상 한도",
+      // 한국어는 "만 원" 단위, 다른 언어는 전체 금액을 쓰므로 두 값을 모두 넘긴다
       value: data?.insuranceLimit
-        ? `최대 ${(data.insuranceLimit / 10000).toLocaleString("ko-KR")}만 원`
+        ? t("최대 {man}만 원", {
+            man: (data.insuranceLimit / 10000).toLocaleString("ko-KR"),
+            amount: formatWon(data.insuranceLimit),
+          })
         : "—",
     },
   ];
@@ -74,45 +81,46 @@ export default function AS_ReservationComplete() {
       <Body>
         <BackLink type="button" onClick={() => navigate(-1)}>
           <BackArrow src={backArrow} alt="" />
-          픽업 예약
+          {t("픽업 예약")}
         </BackLink>
 
         <TopRow>
           <TopLeft>
-            <PageTitle>픽업 예약 완료</PageTitle>
+            <PageTitle>{t("픽업 예약 완료")}</PageTitle>
             <StepIndicator current={4} />
           </TopLeft>
           <Button type="button" onClick={() => navigate("/my-as-list")}>
-            확인
+            {t("확인")}
           </Button>
         </TopRow>
 
-        {loading && <StateBanner>예약 정보를 불러오는 중…</StateBanner>}
-        {!loading && error && <StateBanner role="alert">{toErrorMessage(error)}</StateBanner>}
+        {loading && <StateBanner>{t("예약 정보를 불러오는 중…")}</StateBanner>}
+        {!loading && error && <StateBanner role="alert">{t(toErrorMessage(error))}</StateBanner>}
 
         <ConfirmBanner>
           <ConfirmIconWrap>
             <ConfirmIcon src={checkIcon} alt="" />
           </ConfirmIconWrap>
           <ConfirmTexts>
-            <ConfirmTitle>예약이 확정되었습니다</ConfirmTitle>
+            <ConfirmTitle>{t("예약이 확정되었습니다")}</ConfirmTitle>
             <ConfirmDescription>
-              신원 확인된 기사가 지정하신 일정에 방문합니다. 방문 전 제품을 준비해 두시면 인계가 원활하게
-              진행됩니다.
+              {t(
+                "신원 확인된 기사가 지정하신 일정에 방문합니다. 방문 전 제품을 준비해 두시면 인계가 원활하게 진행됩니다.",
+              )}
             </ConfirmDescription>
           </ConfirmTexts>
         </ConfirmBanner>
 
-        <Columns>
+        <Columns $pending={loading}>
           <Card>
             <CardHeader>
-              <CardHeaderInner>예약 정보 확인</CardHeaderInner>
+              <CardHeaderInner>{t("예약 정보 확인")}</CardHeaderInner>
             </CardHeader>
             <CardBody>
               {reservationRows.map((row, index) => (
                 <DataRow key={row.label} $divider={index < reservationRows.length - 1}>
-                  <DataLabel>{row.label}</DataLabel>
-                  <DataValue>{row.value}</DataValue>
+                  <DataLabel>{t(row.label)}</DataLabel>
+                  <DataValue>{t(row.value)}</DataValue>
                 </DataRow>
               ))}
             </CardBody>
@@ -120,27 +128,27 @@ export default function AS_ReservationComplete() {
 
           <Card>
             <CardHeader>
-              <CardHeaderInner>운송 보험 안내</CardHeaderInner>
+              <CardHeaderInner>{t("운송 보험 안내")}</CardHeaderInner>
             </CardHeader>
             <CardBody>
               {insuranceRows.map((row) => (
                 <DataRow key={row.label} $divider>
-                  <DataLabel>{row.label}</DataLabel>
-                  <DataValue>{row.value}</DataValue>
+                  <DataLabel>{t(row.label)}</DataLabel>
+                  <DataValue>{t(row.value)}</DataValue>
                 </DataRow>
               ))}
-              <InsuranceNote>{INSURANCE_NOTE}</InsuranceNote>
+              <InsuranceNote>{t(INSURANCE_NOTE)}</InsuranceNote>
             </CardBody>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardHeaderInner>기사 방문 전 준비 사항</CardHeaderInner>
+              <CardHeaderInner>{t("기사 방문 전 준비 사항")}</CardHeaderInner>
             </CardHeader>
             <CardBody>
               <NoteList>
                 {PREPARATION_NOTES.map((note) => (
-                  <NoteItem key={note}>{note}</NoteItem>
+                  <NoteItem key={note}>{t(note)}</NoteItem>
                 ))}
               </NoteList>
             </CardBody>
@@ -285,6 +293,7 @@ const ConfirmDescription = styled.p`
 `;
 
 const Columns = styled.div`
+  ${reveal}
   width: 100%;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

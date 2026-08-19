@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import styled from "styled-components";
 import closeIcon from "../assets/icon_close.svg";
+import { useT } from "../i18n";
 
 const CONTACTS = [
   { label: "고객 상담 대표번호", number: "1588-0000", hours: "평일 09:00 – 18:00" },
@@ -8,6 +9,7 @@ const CONTACTS = [
 ];
 
 export default function AgentContactModal({ open, onClose }) {
+  const t = useT();
   useEffect(() => {
     if (!open) return;
 
@@ -36,8 +38,8 @@ export default function AgentContactModal({ open, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <TitleRow>
-          <DialogTitle id="agent-contact-modal-title">상담원 연결</DialogTitle>
-          <CloseButton type="button" onClick={onClose} aria-label="닫기">
+          <DialogTitle id="agent-contact-modal-title">{t("상담원 연결")}</DialogTitle>
+          <CloseButton type="button" onClick={onClose} aria-label={t("닫기")}>
             <CloseIcon src={closeIcon} alt="" />
           </CloseButton>
         </TitleRow>
@@ -45,14 +47,14 @@ export default function AgentContactModal({ open, onClose }) {
         <ContactList>
           {CONTACTS.map((contact) => (
             <ContactCard key={contact.number}>
-              <ContactLabel>{contact.label}</ContactLabel>
+              <ContactLabel>{t(contact.label)}</ContactLabel>
               <ContactNumber>{contact.number}</ContactNumber>
-              <ContactHours>{contact.hours}</ContactHours>
+              <ContactHours>{t(contact.hours)}</ContactHours>
             </ContactCard>
           ))}
         </ContactList>
 
-        <FooterNote>AI 상담으로 해결되지 않은 사항은 상담원이 직접 안내해 드립니다.</FooterNote>
+        <FooterNote>{t("AI 상담으로 해결되지 않은 사항은 상담원이 직접 안내해 드립니다.")}</FooterNote>
       </Dialog>
     </Overlay>
   );

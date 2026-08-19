@@ -5,8 +5,10 @@ import closeIcon from "../assets/icon_close.svg";
 import stepBg from "../assets/icon_step_bg.svg";
 import stepConnector from "../assets/icon_step_connector.svg";
 import { CHECKLIST_ITEMS, SCHEDULE_ITEMS, SERVICE_NOTICES } from "../data/asGuide";
+import { useT } from "../i18n";
 
 export default function AsGuideModal({ open, onClose }) {
+  const t = useT();
   useEffect(() => {
     if (!open) return;
 
@@ -35,15 +37,15 @@ export default function AsGuideModal({ open, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <TitleRow>
-          <DialogTitle id="as-guide-modal-title">A/S접수 안내</DialogTitle>
-          <CloseButton type="button" onClick={onClose} aria-label="닫기">
+          <DialogTitle id="as-guide-modal-title">{t("A/S접수 안내")}</DialogTitle>
+          <CloseButton type="button" onClick={onClose} aria-label={t("닫기")}>
             <CloseIcon src={closeIcon} alt="" />
           </CloseButton>
         </TitleRow>
 
         <Sections>
           <Section>
-            <SectionHeader>접수 전 확인 사항</SectionHeader>
+            <SectionHeader>{t("접수 전 확인 사항")}</SectionHeader>
             <ChecklistGroup>
               {CHECKLIST_ITEMS.map((item, index) => (
                 <ChecklistItem key={item.number}>
@@ -61,8 +63,8 @@ export default function AsGuideModal({ open, onClose }) {
                   </ChecklistIconWrap>
                   <ChecklistBody>
                     <ChecklistNumber>{item.number}</ChecklistNumber>
-                    <ChecklistLabel>{item.label}</ChecklistLabel>
-                    <ChecklistDesc>{item.desc}</ChecklistDesc>
+                    <ChecklistLabel>{t(item.label)}</ChecklistLabel>
+                    <ChecklistDesc>{t(item.desc)}</ChecklistDesc>
                   </ChecklistBody>
                 </ChecklistItem>
               ))}
@@ -70,22 +72,22 @@ export default function AsGuideModal({ open, onClose }) {
           </Section>
 
           <Section>
-            <SectionHeader>예상 소요 시간 안내</SectionHeader>
+            <SectionHeader>{t("예상 소요 시간 안내")}</SectionHeader>
             <ScheduleList>
               {SCHEDULE_ITEMS.map((item) => (
                 <ScheduleRow key={item.label}>
-                  <span>{item.label}</span>
-                  <span>{item.value}</span>
+                  <span>{t(item.label)}</span>
+                  <span>{t(item.value)}</span>
                 </ScheduleRow>
               ))}
             </ScheduleList>
           </Section>
 
           <Section>
-            <SectionHeader>A/S 서비스 안내</SectionHeader>
+            <SectionHeader>{t("A/S 서비스 안내")}</SectionHeader>
             <NoticeList>
               {SERVICE_NOTICES.map((notice) => (
-                <NoticeItem key={notice}>{notice}</NoticeItem>
+                <NoticeItem key={notice}>{t(notice)}</NoticeItem>
               ))}
             </NoticeList>
           </Section>

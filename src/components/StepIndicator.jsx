@@ -1,4 +1,6 @@
 import styled, { css } from "styled-components";
+
+import { useT } from "../i18n";
 import stepCheck from "../assets/icon_step_check.svg";
 
 // AS 접수 플로우 4단계. 715 · 712 · 720 · 713 네 화면이 공유한다.
@@ -12,6 +14,8 @@ const AS_STEPS = ["제품 정보 입력", "AI 예상 견적", "픽업 예약", "
  * Figma에 개별 에셋으로 다 준비돼 있지 않기 때문이다. 원·색·크기는 디자인 값 그대로다.
  */
 export default function StepIndicator({ current }) {
+  const t = useT();
+
   return (
     <Wrap>
       {AS_STEPS.map((label, index) => {
@@ -28,7 +32,7 @@ export default function StepIndicator({ current }) {
               ) : (
                 <NumberBadge $state={state}>{step}</NumberBadge>
               )}
-              <Label $state={state}>{label}</Label>
+              <Label $state={state}>{t(label)}</Label>
             </Step>
             {step < AS_STEPS.length && (
               <ConnectorWrap>

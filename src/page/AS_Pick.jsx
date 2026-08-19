@@ -6,8 +6,11 @@ import StatusLabel from "../components/StatusLabel";
 import * as asCase from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
 import { formatDotDate, toErrorMessage } from "../api/format";
+import { useT } from "../i18n";
+import { revealOnMount } from "../css/motion";
 
 export default function AS_Pick() {
+  const t = useT();
   const navigate = useNavigate();
 
   // 명세 6-1: 711 전용 API 가 없어 A/S 조회 목록(710)을 그대로 재사용한다
@@ -34,27 +37,27 @@ export default function AS_Pick() {
     <Page>
       <Body>
         <Heading>
-          <PageTitle>상담할 AS 접수 건 선택</PageTitle>
+          <PageTitle>{t("상담할 AS 접수 건 선택")}</PageTitle>
           <PageDescription>
-            선택한 접수 건의 제품·접수·상담 이력을 바탕으로 상담이 이어집니다.
+            {t("선택한 접수 건의 제품·접수·상담 이력을 바탕으로 상담이 이어집니다.")}
           </PageDescription>
         </Heading>
 
         <CaseList>
           {loading && (
             <EmptyCard>
-              <EmptyText>불러오는 중…</EmptyText>
+              <EmptyText>{t("불러오는 중…")}</EmptyText>
             </EmptyCard>
           )}
 
           {!loading && error && (
             <EmptyCard>
-              <EmptyText>{toErrorMessage(error)}</EmptyText>
+              <EmptyText>{t(toErrorMessage(error))}</EmptyText>
             </EmptyCard>
           )}
 
-          {itemList.map((item) => (
-            <CaseCard key={item.asNo}>
+          {itemList.map((item, index) => (
+            <CaseCard key={item.asNo} $index={index}>
               <CaseInfo>
                 <CaseThumb>
                   {item.thumbnailUrl && (
@@ -75,19 +78,19 @@ export default function AS_Pick() {
                     <CaseId>{item.asNo}</CaseId>
                     <StatusLabel status={item.status} label={item.statusLabel} />
                   </CaseMetaRow>
-                  <CaseDate>접수일 {formatDotDate(item.createdAt)}</CaseDate>
+                  <CaseDate>{t("접수일 {date}", { date: formatDotDate(item.createdAt) })}</CaseDate>
                 </CaseTexts>
               </CaseInfo>
               <Button type="button" onClick={() => handleConsult(item)}>
-                이 건으로 상담
+                {t("이 건으로 상담")}
               </Button>
             </CaseCard>
           ))}
 
           <EmptyCard>
-            <EmptyText>접수 건 없이 신규 상담을 시작하시겠습니까?</EmptyText>
+            <EmptyText>{t("접수 건 없이 신규 상담을 시작하시겠습니까?")}</EmptyText>
             <EmptyLink type="button" onClick={() => navigate("/no-record")}>
-              AS 이력이 없어요
+              {t("AS 이력이 없어요")}
             </EmptyLink>
           </EmptyCard>
         </CaseList>
@@ -143,6 +146,7 @@ const CaseList = styled.div`
 `;
 
 const CaseCard = styled.div`
+  ${revealOnMount}
   width: 100%;
   box-sizing: border-box;
   display: flex;
@@ -228,6 +232,7 @@ const CaseDate = styled.p`
 `;
 
 const EmptyCard = styled.div`
+  ${revealOnMount}
   width: 100%;
   box-sizing: border-box;
   display: flex;

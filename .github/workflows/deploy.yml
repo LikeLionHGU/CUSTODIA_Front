@@ -1,0 +1,55 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # 저장소 Actions 탭에서 수동으로도 돌릴 수 있게 열어 둔다
+  workflow_dispatch:
+
+# deploy-pages 액션이 요구하는 권한
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포는 한 번에 하나만. 진행 중인 배포는 끝까지 두고 다음 커밋을 이어서 올린다.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run build
+        env:
+          # Settings → Secrets and variables → Actions → Variables 에서 지정한다.
+          # 비워 두면 요청이 /api 로 나가고, 배포본에는 개발 서버 프록시가 없어 실패한다.
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          # 저장소 이름이 아닌 경로(커스텀 도메인 등)에 올릴 때만 지정한다.
+          VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

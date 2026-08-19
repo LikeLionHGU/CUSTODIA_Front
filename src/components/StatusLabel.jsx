@@ -1,5 +1,7 @@
 import styled from "styled-components";
 
+import { useT } from "../i18n";
+
 /**
  * 진행 현황 라벨 (디자인 572:11925).
  *
@@ -31,8 +33,10 @@ const FALLBACK = TONES.ESTIMATED;
  * @param {string} label  서버가 준 표시 문구
  */
 export default function StatusLabel({ status, label }) {
+  const t = useT();
   const tone = TONES[status] ?? FALLBACK;
-  const text = label;
+  // 서버가 준 한국어 라벨을 사전에 통과시킨다 — 없는 문구는 원문 그대로 보인다
+  const text = t(label);
 
   if (!text) return null;
 
@@ -49,7 +53,7 @@ const Pill = styled.span`
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 500;
   line-height: 16.5px;
@@ -62,6 +66,6 @@ const Dot = styled.span`
   flex-shrink: 0;
   width: 6px;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: ${(props) => props.$tone.color};
 `;

@@ -1,5 +1,15 @@
 /* index.css */
 
+:root {
+  /* 모서리 반경 토큰 — 카드·입력창·버튼·타일이 같은 값을 공유한다 */
+  --radius-card: 8px;
+  --radius-control: 8px;
+  --radius-pill: 999px;
+
+  /* 폼 컨트롤 공통 치수 */
+  --control-height: 44px;
+}
+
 *{
   margin: 0;
   padding: 0;

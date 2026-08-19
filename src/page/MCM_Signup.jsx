@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import * as member from "../api/member";
 import { ApiError } from "../api/client";
+import { useT } from "../i18n";
 
 const fields = [
   { id: "email", label: "이메일*", type: "email", autoComplete: "email" },
@@ -30,6 +31,7 @@ const ERROR_MESSAGES = {
 };
 
 export default function MCM_Signup() {
+  const t = useT();
   const navigate = useNavigate();
   const [form, setForm] = useState(INITIAL_FORM);
   const [agreements, setAgreements] = useState({
@@ -68,7 +70,7 @@ export default function MCM_Signup() {
       navigate("/login");
     } catch (err) {
       const code = err instanceof ApiError ? err.code : null;
-      setError(ERROR_MESSAGES[code] || err.message || "회원가입에 실패했습니다.");
+      setError(t(ERROR_MESSAGES[code]) || err.message || t("회원가입에 실패했습니다."));
     } finally {
       setSubmitting(false);
     }
@@ -77,7 +79,7 @@ export default function MCM_Signup() {
   return (
     <Page>
       <SignupCard>
-        <Title>회원가입</Title>
+        <Title>{t("회원가입")}</Title>
 
         <Form onSubmit={handleSubmit}>
           <Fields>
@@ -92,7 +94,7 @@ export default function MCM_Signup() {
                   value={form[field.id]}
                   onChange={handleChange(field.id)}
                 />
-                <Label htmlFor={field.id}>{field.label}</Label>
+                <Label htmlFor={field.id}>{t(field.label)}</Label>
               </Field>
             ))}
           </Fields>
@@ -104,7 +106,7 @@ export default function MCM_Signup() {
                 checked={agreements.agreedService}
                 onChange={handleAgreementChange("agreedService")}
               />
-              <span>이용약관 동의 (필수)</span>
+              <span>{t("이용약관 동의 (필수)")}</span>
             </Agreement>
             <Agreement>
               <Checkbox
@@ -112,7 +114,7 @@ export default function MCM_Signup() {
                 checked={agreements.agreedPrivacy}
                 onChange={handleAgreementChange("agreedPrivacy")}
               />
-              <span>개인정보 수집·이용 동의 (필수)</span>
+              <span>{t("개인정보 수집·이용 동의 (필수)")}</span>
             </Agreement>
             <Agreement>
               <Checkbox
@@ -120,18 +122,18 @@ export default function MCM_Signup() {
                 checked={agreements.agreedMarketing}
                 onChange={handleAgreementChange("agreedMarketing")}
               />
-              <span>마케팅 정보 수신 동의 (선택)</span>
+              <span>{t("마케팅 정보 수신 동의 (선택)")}</span>
             </Agreement>
           </Agreements>
 
           {error && <ErrorText role="alert">{error}</ErrorText>}
           <SubmitButton type="submit" disabled={submitting}>
-            {submitting ? "가입 중…" : "회원가입"}
+            {submitting ? t("가입 중…") : t("회원가입")}
           </SubmitButton>
         </Form>
 
         <LoginGuide>
-          이미 계정이 있으신가요? <LoginLink to="/login">로그인</LoginLink>
+          {t("이미 계정이 있으신가요?")} <LoginLink to="/login">{t("로그인")}</LoginLink>
         </LoginGuide>
       </SignupCard>
     </Page>

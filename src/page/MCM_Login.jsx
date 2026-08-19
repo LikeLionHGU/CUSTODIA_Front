@@ -5,8 +5,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 
 import * as member from "../api/member";
+import { useT } from "../i18n";
 
 export default function MCM_Login() {
+  const t = useT();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState(null);
@@ -24,11 +26,11 @@ export default function MCM_Login() {
       const result = await member.loginWithGoogle(credentialResponse.credential);
       if (result.needsContactInfo) {
         // 마이페이지 화면이 아직 없어 홈으로 보내되 안내는 남긴다
-        alert("픽업 예약을 위해 연락처 입력이 필요합니다.");
+        alert(t("픽업 예약을 위해 연락처 입력이 필요합니다."));
       }
       navigate("/");
     } catch (err) {
-      setError(err.message || "구글 로그인에 실패했습니다.");
+      setError(err.message || t("구글 로그인에 실패했습니다."));
     }
   };
 
@@ -46,8 +48,8 @@ export default function MCM_Login() {
       // 명세 1-2: 이메일·비밀번호 오류를 구분하지 않고 401 INVALID_CREDENTIALS
       setError(
         err.code === "INVALID_CREDENTIALS"
-          ? "이메일 또는 비밀번호가 올바르지 않습니다."
-          : err.message || "로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+          ? t("이메일 또는 비밀번호가 올바르지 않습니다.")
+          : err.message || t("로그인에 실패했습니다. 잠시 후 다시 시도해 주세요."),
       );
     } finally {
       setSubmitting(false);
@@ -58,10 +60,8 @@ export default function MCM_Login() {
     <Page>
       <LoginCard>
         <HeadingGroup>
-          <Title>로그인</Title>
-          <Description>
-            회원으로 가입하시면 빠르고 편리하게 이용하실 수 있습니다.
-          </Description>
+          <Title>{t("로그인")}</Title>
+          <Description>{t("회원으로 가입하시면 빠르고 편리하게 이용하실 수 있습니다.")}</Description>
         </HeadingGroup>
 
         <Form onSubmit={handleSubmit}>
@@ -75,7 +75,7 @@ export default function MCM_Login() {
               value={form.email}
               onChange={handleChange("email")}
             />
-            <Label htmlFor="email">이메일*</Label>
+            <Label htmlFor="email">{t("이메일*")}</Label>
           </Field>
           <Field>
             <Input
@@ -87,28 +87,30 @@ export default function MCM_Login() {
               value={form.password}
               onChange={handleChange("password")}
             />
-            <Label htmlFor="password">비밀번호*</Label>
+            <Label htmlFor="password">{t("비밀번호*")}</Label>
           </Field>
           {error && <ErrorText role="alert">{error}</ErrorText>}
           <LoginButton type="submit" disabled={submitting}>
-            {submitting ? "로그인 중…" : "로그인"}
+            {submitting ? t("로그인 중…") : t("로그인")}
           </LoginButton>
         </Form>
 
-        <Divider><span>또는</span></Divider>
+        <Divider>
+          <span>{t("또는")}</span>
+        </Divider>
 
         {/* useGoogleLogin 은 access token 만 주고 ID 토큰을 주지 않는다.
             서버가 ID 토큰만 검증하므로 공식 GoogleLogin 컴포넌트를 쓴다. */}
         <GoogleButtonWrap>
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
-            onError={() => setError("구글 로그인에 실패했습니다.")}
+            onError={() => setError(t("구글 로그인에 실패했습니다."))}
             width="443"
           />
         </GoogleButtonWrap>
 
         <SignupText>
-          계정이 없으신가요? <SignupLink to="/signup">가입하기</SignupLink>
+          {t("계정이 없으신가요?")} <SignupLink to="/signup">{t("가입하기")}</SignupLink>
         </SignupText>
       </LoginCard>
     </Page>

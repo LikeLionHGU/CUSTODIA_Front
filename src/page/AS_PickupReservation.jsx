@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import * as pickup from "../api/pickup";
 import { useApiQuery } from "../api/useApiQuery";
-import { toErrorMessage } from "../api/format";
+import { formatKoreanDate, toErrorMessage } from "../api/format";
 import calendarIcon from "../assets/icon_calendar.svg";
 import safetyDriverId from "../assets/safety_driver_id.jpg";
 import safetyPhotoRecord from "../assets/safety_photo_record.jpg";
 import safetySignature from "../assets/safety_signature.jpg";
 import safetyInsurance from "../assets/safety_insurance.jpg";
 import styled from "styled-components";
+import { useT } from "../i18n";
 
 const WEEKDAYS_KO = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -47,9 +48,10 @@ function isSameDate(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-function formatDateKorean(date) {
+/** `2026년 8월 18일 (화)` — 날짜 본문은 언어별 표기를 따르고 요일만 따로 번역한다 */
+function formatDateKorean(date, t) {
   if (!date) return "";
-  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAYS_KO[date.getDay()]})`;
+  return `${formatKoreanDate(toDateKey(date))} (${t(WEEKDAYS_KO[date.getDay()])})`;
 }
 
 function buildCalendarDays(monthDate) {
@@ -469,6 +471,7 @@ function ChevronIcon({ wrapper: Wrapper = ChevronWrap }) {
 }
 
 export default function AS_PickupReservation() {
+  const t = useT();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -582,7 +585,7 @@ export default function AS_PickupReservation() {
       });
       navigate("/reservation-complete", { state: { pickupNo } });
     } catch (err) {
-      setSubmitError(PICKUP_ERRORS[err.code] || toErrorMessage(err, "예약에 실패했습니다."));
+      setSubmitError(t(PICKUP_ERRORS[err.code] || toErrorMessage(err, "예약에 실패했습니다.")));
     } finally {
       setSubmitting(false);
     }
@@ -592,33 +595,37 @@ export default function AS_PickupReservation() {
     <Page>
       <BodyRow>
         <Body>
-          <SectionTitle>픽업 예약</SectionTitle>
+          <SectionTitle>{t("픽업 예약")}</SectionTitle>
 
           <Columns>
             <LeftColumn>
               <Card>
-                <CardTitle>접수 건 정보</CardTitle>
+                <CardTitle>{t("접수 건 정보")}</CardTitle>
                 <InfoRow>
                   <InfoImage>Image</InfoImage>
                   <InfoTextGroup>
                     <InfoText>{receiptInfo.productName}</InfoText>
-                    <InfoSubText>AS 접수번호: {receiptInfo.receiptNumber}</InfoSubText>
-                    <InfoSubText>접수 상태: {receiptInfo.status}</InfoSubText>
+                    <InfoSubText>
+                      {t("AS 접수번호: {no}", { no: receiptInfo.receiptNumber })}
+                    </InfoSubText>
+                    <InfoSubText>
+                      {t("접수 상태: {status}", { status: t(receiptInfo.status) })}
+                    </InfoSubText>
                   </InfoTextGroup>
                 </InfoRow>
               </Card>
 
               <Card>
-                <CardTitle>픽업 일시 선택</CardTitle>
+                <CardTitle>{t("픽업 일시 선택")}</CardTitle>
 
                 <FieldGroup ref={dateFieldRef}>
-                  <FieldLabel>픽업 날짜</FieldLabel>
+                  <FieldLabel>{t("픽업 날짜")}</FieldLabel>
                   <SelectBox
                     type="button"
                     $hasValue={!!pickupDate}
                     onClick={() => setCalendarOpen((prev) => !prev)}
                   >
-                    {pickupDate ? formatDateKorean(pickupDate) : "날짜 선택"}
+                    {pickupDate ? formatDateKorean(pickupDate, t) : t("날짜 선택")}
                     <CalendarIcon src={calendarIcon} alt="" />
                   </SelectBox>
 
@@ -629,7 +636,10 @@ export default function AS_PickupReservation() {
                           ‹
                         </CalendarNavButton>
                         <CalendarTitle>
-                          {calendarMonth.getFullYear()}년 {calendarMonth.getMonth() + 1}월
+                          {t("{year}년 {month}월", {
+                            year: calendarMonth.getFullYear(),
+                            month: calendarMonth.getMonth() + 1,
+                          })}
                         </CalendarTitle>
                         <CalendarNavButton type="button" onClick={handleNextMonth}>
                           ›
@@ -637,7 +647,7 @@ export default function AS_PickupReservation() {
                       </CalendarHeader>
                       <CalendarGrid>
                         {WEEKDAYS_KO.map((day) => (
-                          <CalendarWeekday key={day}>{day}</CalendarWeekday>
+                          <CalendarWeekday key={day}>{t(day)}</CalendarWeekday>
                         ))}
                         {calendarDays.map((date, idx) => {
                           if (!date) return <div key={`blank-${idx}`} />;
@@ -664,7 +674,7 @@ export default function AS_PickupReservation() {
                 </FieldGroup>
 
                 <FieldGroup>
-                  <FieldLabel>픽업 시간대</FieldLabel>
+                  <FieldLabel>{t("픽업 시간대")}</FieldLabel>
                   <SelectWrapper>
                     <Select
                       value={pickupTime}
@@ -672,7 +682,7 @@ export default function AS_PickupReservation() {
                       $hasValue={!!pickupTime}
                     >
                       <option value="" disabled hidden>
-                        시간대 선택
+                        {t("시간대 선택")}
                       </option>
                       {timeSlots.map((slot) => (
                         <option
@@ -681,7 +691,7 @@ export default function AS_PickupReservation() {
                           disabled={!slot.available}
                         >
                           {slot.slotStart} – {slot.slotEnd}
-                          {slot.available ? "" : " (마감)"}
+                          {slot.available ? "" : ` ${t("(마감)")}`}
                         </option>
                       ))}
                     </Select>
@@ -690,27 +700,27 @@ export default function AS_PickupReservation() {
                 </FieldGroup>
 
                 <FieldGroup>
-                  <FieldLabel>전화번호</FieldLabel>
+                  <FieldLabel>{t("전화번호")}</FieldLabel>
                   <TextInput
                     type="tel"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    placeholder="숫자만 입력해 주세요"
+                    placeholder={t("숫자만 입력해 주세요")}
                     value={phone}
                     onChange={handlePhoneChange}
                   />
                 </FieldGroup>
-                <InfoSubText>기사님이 해당 전화번호로 연락을 드릴 예정입니다.</InfoSubText>
+                <InfoSubText>{t("기사님이 해당 전화번호로 연락을 드릴 예정입니다.")}</InfoSubText>
               </Card>
 
               <Card>
-                <CardTitle>수거 장소</CardTitle>
+                <CardTitle>{t("수거 장소")}</CardTitle>
                 <FieldGroup>
-                  <FieldLabel>주소</FieldLabel>
+                  <FieldLabel>{t("주소")}</FieldLabel>
                   <TextInput type="text" value={address} onChange={(e) => setAddress(e.target.value)} />
                 </FieldGroup>
                 <FieldGroup>
-                  <FieldLabel>상세 주소 (동·호수 등)</FieldLabel>
+                  <FieldLabel>{t("상세 주소 (동·호수 등)")}</FieldLabel>
                   <TextInput
                     type="text"
                     value={addressDetail}
@@ -718,45 +728,46 @@ export default function AS_PickupReservation() {
                   />
                 </FieldGroup>
                 <FieldGroup>
-                  <FieldLabel>수거 시 전달 사항</FieldLabel>
+                  <FieldLabel>{t("수거 시 전달 사항")}</FieldLabel>
                   <TextArea value={note} onChange={(e) => setNote(e.target.value)} />
                 </FieldGroup>
               </Card>
 
               <Card>
-                <CardTitle>안전 인계 안내</CardTitle>
+                <CardTitle>{t("안전 인계 안내")}</CardTitle>
                 <SafetyGrid>
                   {SAFETY_ITEMS.map((item) => (
                     <SafetyItem key={item.label}>
                       <SafetyImage src={item.image} alt="" />
-                      <SafetyLabel>{item.label}</SafetyLabel>
+                      <SafetyLabel>{t(item.label)}</SafetyLabel>
                     </SafetyItem>
                   ))}
                 </SafetyGrid>
                 <InfoSubText>
-                  픽업 기사는 신원 확인된 MCM 케어 파트너 기사입니다. 인계 전후 제품 상태 사진과 전자서명이 접수
-                  건에 자동으로 기록됩니다.
+                  {t(
+                    "픽업 기사는 신원 확인된 MCM 케어 파트너 기사입니다. 인계 전후 제품 상태 사진과 전자서명이 접수 건에 자동으로 기록됩니다.",
+                  )}
                 </InfoSubText>
               </Card>
             </LeftColumn>
 
             <RightColumn>
               <Card>
-                <CardTitle>예약 정보 확인</CardTitle>
+                <CardTitle>{t("예약 정보 확인")}</CardTitle>
                 <SummaryRow>
-                  <SummaryLabel>접수 번호</SummaryLabel>
+                  <SummaryLabel>{t("접수 번호")}</SummaryLabel>
                   <SummaryValue>{receiptInfo.receiptNumber}</SummaryValue>
                 </SummaryRow>
                 <SummaryRow>
-                  <SummaryLabel>제품명</SummaryLabel>
+                  <SummaryLabel>{t("제품명")}</SummaryLabel>
                   <SummaryValue>{receiptInfo.productName}</SummaryValue>
                 </SummaryRow>
                 <SummaryRow>
-                  <SummaryLabel>픽업 날짜</SummaryLabel>
-                  <SummaryValue>{pickupDate ? formatDateKorean(pickupDate) : "-"}</SummaryValue>
+                  <SummaryLabel>{t("픽업 날짜")}</SummaryLabel>
+                  <SummaryValue>{pickupDate ? formatDateKorean(pickupDate, t) : "-"}</SummaryValue>
                 </SummaryRow>
                 <SummaryRow>
-                  <SummaryLabel>픽업 시간대</SummaryLabel>
+                  <SummaryLabel>{t("픽업 시간대")}</SummaryLabel>
                   <SummaryValue>
                     {selectedTimeSlot
                       ? `${selectedTimeSlot.slotStart} – ${selectedTimeSlot.slotEnd}`
@@ -764,28 +775,29 @@ export default function AS_PickupReservation() {
                   </SummaryValue>
                 </SummaryRow>
                 <SummaryRow>
-                  <SummaryLabel>수거 주소</SummaryLabel>
+                  <SummaryLabel>{t("수거 주소")}</SummaryLabel>
                   <SummaryValue>{address.trim() ? address : "-"}</SummaryValue>
                 </SummaryRow>
               </Card>
 
               <Card>
-                <CardTitle>운송 보험 및 유의사항</CardTitle>
+                <CardTitle>{t("운송 보험 및 유의사항")}</CardTitle>
                 <CardText>
-                  본 픽업 서비스에는 운송 보험이 자동 적용됩니다. 인계 시점부터 MCM 케어 수선센터 도착까지 제품이
-                  보호됩니다.
+                  {t(
+                    "본 픽업 서비스에는 운송 보험이 자동 적용됩니다. 인계 시점부터 MCM 케어 수선센터 도착까지 제품이 보호됩니다.",
+                  )}
                 </CardText>
-                <CardText>예약 확정 후 취소는 픽업 예정일 24시간 전까지 가능합니다.</CardText>
-                <CardText>최종 수선 비용은 실물 진단 후 별도 안내됩니다. 예상 견적은 참고용입니다.</CardText>
+                <CardText>{t("예약 확정 후 취소는 픽업 예정일 24시간 전까지 가능합니다.")}</CardText>
+                <CardText>{t("최종 수선 비용은 실물 진단 후 별도 안내됩니다. 예상 견적은 참고용입니다.")}</CardText>
               </Card>
 
               {(submitError || formError) && (
                 <CardText role="alert" style={{ color: "#c0392b" }}>
-                  {submitError || toErrorMessage(formError)}
+                  {submitError || t(toErrorMessage(formError))}
                 </CardText>
               )}
               <Button type="button" disabled={!isFormValid} onClick={handleConfirm}>
-                {submitting ? "예약 중…" : "예약 확정"}
+                {submitting ? t("예약 중…") : t("예약 확정")}
               </Button>
             </RightColumn>
           </Columns>

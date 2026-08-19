@@ -7,6 +7,8 @@ import * as asCase from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
 import { formatDotDate, toErrorMessage } from "../api/format";
 import chevronDown from "../assets/icon_chevron_down.svg";
+import { useLanguage } from "../i18n";
+import { reveal, revealOnMount } from "../css/motion";
 
 /** 명세 3-5: filter 는 ALL · IN_PROGRESS · COMPLETED */
 const FILTERS = [
@@ -24,13 +26,16 @@ const COLUMNS = ["제품 정보", "접수 번호", "상태", "일정", "갱신�
  * 명세 3-5: 진행 중은 expectedCompletedAt, 완료된 건은 completedAt 을 보여주고
  * 화면 라벨도 "예상 완료" / "완료일" 로 달라진다.
  */
-function formatSchedule(item) {
-  if (item.completedAt) return `완료일 ${formatDotDate(item.completedAt)}`;
-  if (item.expectedCompletedAt) return `예상 완료 ${formatDotDate(item.expectedCompletedAt)}`;
+function formatSchedule(item, t) {
+  if (item.completedAt) return t("완료일 {date}", { date: formatDotDate(item.completedAt) });
+  if (item.expectedCompletedAt) {
+    return t("예상 완료 {date}", { date: formatDotDate(item.expectedCompletedAt) });
+  }
   return "—";
 }
 
 export default function AS_MyList() {
+  const { lang, t } = useLanguage();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("ALL");
   const [page, setPage] = useState(0);
@@ -43,7 +48,7 @@ export default function AS_MyList() {
   useEffect(() => {
     const target = filterRefs.current[filter];
     if (target) setIndicator({ left: target.offsetLeft, width: target.offsetWidth });
-  }, [filter]);
+  }, [filter, lang]);
 
   const { data, loading, error } = useApiQuery(
     () => asCase.getList({ filter, page, size: PAGE_SIZE }),
@@ -62,7 +67,7 @@ export default function AS_MyList() {
     <Page>
       <Body>
         <TopRow>
-          <PageTitle>A/S 조회</PageTitle>
+          <PageTitle>{t("A/S 조회")}</PageTitle>
           <FilterGroup>
             <FilterIndicator
               style={{ transform: `translateX(${indicator.left}px)`, width: indicator.width }}
@@ -78,7 +83,7 @@ export default function AS_MyList() {
                 $active={filter === item.value}
                 onClick={() => handleFilterChange(item.value)}
               >
-                {item.label}
+                {t(item.label)}
               </FilterButton>
             ))}
           </FilterGroup>
@@ -87,25 +92,25 @@ export default function AS_MyList() {
         {/* 나의 AS 현황 — 진행 중 / 완료 / 최근 갱신 3분할 */}
         <Card>
           <CardHeader>
-            <CardHeaderInner>나의 AS 현황</CardHeaderInner>
+            <CardHeaderInner>{t("나의 AS 현황")}</CardHeaderInner>
           </CardHeader>
           <SummaryGrid>
             <SummaryCell>
-              <SummaryLabel>진행 중</SummaryLabel>
-              <SummaryValue>{data ? `${data.inProgressCount}건` : "—"}</SummaryValue>
-              <SummaryNote>픽업 예약 포함</SummaryNote>
+              <SummaryLabel>{t("진행 중")}</SummaryLabel>
+              <SummaryValue $pending={loading}>{data ? t("{count}건", { count: data.inProgressCount }) : "—"}</SummaryValue>
+              <SummaryNote>{t("픽업 예약 포함")}</SummaryNote>
             </SummaryCell>
             <SummaryCell>
-              <SummaryLabel>완료</SummaryLabel>
-              <SummaryValue>{data ? `${data.completedCount}건` : "—"}</SummaryValue>
-              <SummaryNote>누적 완료 건수</SummaryNote>
+              <SummaryLabel>{t("완료")}</SummaryLabel>
+              <SummaryValue $pending={loading}>{data ? t("{count}건", { count: data.completedCount }) : "—"}</SummaryValue>
+              <SummaryNote>{t("누적 완료 건수")}</SummaryNote>
             </SummaryCell>
             <SummaryCell $last>
-              <SummaryLabel>최근 갱신</SummaryLabel>
-              <SummaryValue>
+              <SummaryLabel>{t("최근 갱신")}</SummaryLabel>
+              <SummaryValue $pending={loading}>
                 {data?.lastUpdatedAt ? formatDotDate(data.lastUpdatedAt) : "—"}
               </SummaryValue>
-              <SummaryNote>마지막 상태 업데이트</SummaryNote>
+              <SummaryNote>{t("마지막 상태 업데이트")}</SummaryNote>
             </SummaryCell>
           </SummaryGrid>
         </Card>
@@ -114,29 +119,30 @@ export default function AS_MyList() {
         <Card>
           <CardHeader>
             <CardHeaderInner>
-              접수 건 목록
-              <TotalCount>{data ? `총 ${data.totalElements}건` : ""}</TotalCount>
+              {t("접수 건 목록")}
+              <TotalCount>{data ? t("총 {count}건", { count: data.totalElements }) : ""}</TotalCount>
             </CardHeaderInner>
           </CardHeader>
 
           <TableHeader>
             <HeaderCell aria-hidden />
             {COLUMNS.map((column) => (
-              <HeaderCell key={column}>{column}</HeaderCell>
+              <HeaderCell key={column}>{t(column)}</HeaderCell>
             ))}
             <HeaderCell aria-hidden />
           </TableHeader>
 
           <TableBody>
-            {loading && <StateRow>불러오는 중…</StateRow>}
-            {!loading && error && <StateRow role="alert">{toErrorMessage(error)}</StateRow>}
+            {loading && <StateRow>{t("불러오는 중…")}</StateRow>}
+            {!loading && error && <StateRow role="alert">{t(toErrorMessage(error))}</StateRow>}
             {!loading && !error && itemList.length === 0 && (
-              <StateRow>조회된 접수 건이 없습니다.</StateRow>
+              <StateRow>{t("조회된 접수 건이 없습니다.")}</StateRow>
             )}
 
-            {itemList.map((item) => (
+            {itemList.map((item, index) => (
               <Row
                 key={item.asNo}
+                $index={index}
                 type="button"
                 onClick={() => navigate("/my-as-detail", { state: { asNo: item.asNo } })}
               >
@@ -155,13 +161,13 @@ export default function AS_MyList() {
                 </Thumb>
                 <ProductCell>
                   <ProductName>{item.modelName}</ProductName>
-                  <ProductMeta>접수일 {formatDotDate(item.createdAt)}</ProductMeta>
+                  <ProductMeta>{t("접수일 {date}", { date: formatDotDate(item.createdAt) })}</ProductMeta>
                 </ProductCell>
                 <MutedCell>{item.asNo}</MutedCell>
                 <div>
                   <StatusLabel status={item.status} label={item.statusLabel} />
                 </div>
-                <ScheduleCell>{formatSchedule(item)}</ScheduleCell>
+                <ScheduleCell>{formatSchedule(item, t)}</ScheduleCell>
                 <MutedCell>{formatDotDate(item.statusUpdatedAt)}</MutedCell>
                 <RowChevron src={chevronDown} alt="" />
               </Row>
@@ -175,7 +181,7 @@ export default function AS_MyList() {
               type="button"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              aria-label="이전 페이지"
+              aria-label={t("이전 페이지")}
             >
               ‹
             </PageArrow>
@@ -193,7 +199,7 @@ export default function AS_MyList() {
               type="button"
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              aria-label="다음 페이지"
+              aria-label={t("다음 페이지")}
             >
               ›
             </PageArrow>
@@ -371,6 +377,8 @@ const SummaryLabel = styled.p`
 `;
 
 const SummaryValue = styled.p`
+  ${reveal}
+  min-height: 35px;
   margin: 0;
   font-size: 28px;
   line-height: 35px;
@@ -425,6 +433,7 @@ const TableBody = styled.div`
 `;
 
 const Row = styled.button`
+  ${revealOnMount}
   ${gridTemplate}
   width: 100%;
   padding: 16px 24px;
@@ -516,6 +525,7 @@ const RowChevron = styled.img`
 `;
 
 const StateRow = styled.p`
+  ${revealOnMount}
   margin: 0;
   padding: 40px 24px;
   text-align: center;

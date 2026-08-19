@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 
+import { LANGUAGES, useLanguage } from "../i18n";
 import Logo from "../assets/logo_custodia_light.svg";
 
 /** 링크 컬럼. Header의 NAV_ITEMS와 같은 방식으로 데이터에서 렌더한다. */
@@ -32,9 +33,9 @@ const CONTACTS = [
   { label: "AS 전담 직통번호", number: "1588-0001", hours: "평일 09:00 – 18:00 · 토 10:00 – 15:00" },
 ];
 
-const LANGUAGES = ["KR", "EN", "DE"];
-
 export default function Footer() {
+  const { lang, setLang, t } = useLanguage();
+
   return (
     <Container>
       <Inner>
@@ -45,15 +46,15 @@ export default function Footer() {
 
           {LINK_COLUMNS.map((column) => (
             <Column key={column.title}>
-              <ColumnTitle>{column.title}</ColumnTitle>
+              <ColumnTitle>{t(column.title)}</ColumnTitle>
               <LinkList>
                 {column.links.map((link) =>
                   link.to ? (
                     <FooterLink key={link.label} to={link.to}>
-                      {link.label}
+                      {t(link.label)}
                     </FooterLink>
                   ) : (
-                    <FooterText key={link.label}>{link.label}</FooterText>
+                    <FooterText key={link.label}>{t(link.label)}</FooterText>
                   ),
                 )}
               </LinkList>
@@ -61,13 +62,13 @@ export default function Footer() {
           ))}
 
           <Column>
-            <ColumnTitle>상담센터</ColumnTitle>
+            <ColumnTitle>{t("상담센터")}</ColumnTitle>
             <ContactList>
               {CONTACTS.map((contact) => (
                 <Contact key={contact.number}>
-                  <ContactLabel>{contact.label}</ContactLabel>
+                  <ContactLabel>{t(contact.label)}</ContactLabel>
                   <ContactNumber>{contact.number}</ContactNumber>
-                  <ContactHours>{contact.hours}</ContactHours>
+                  <ContactHours>{t(contact.hours)}</ContactHours>
                 </Contact>
               ))}
             </ContactList>
@@ -76,13 +77,21 @@ export default function Footer() {
 
         <BottomBar>
           <Copyright>
-            © 2025 CUSTODIA. All rights reserved. | 사업자등록번호 123-45-67890 | 대표 Michael
-            Michalsky | 서울특별시 강남구 테헤란로 123
+            {t(
+              "© 2025 CUSTODIA. All rights reserved. | 사업자등록번호 123-45-67890 | 대표 Michael Michalsky | 서울특별시 강남구 테헤란로 123",
+            )}
           </Copyright>
           <Languages>
-            {LANGUAGES.map((lang, index) => (
-              <Language key={lang} $active={index === 0}>
-                {lang}
+            {LANGUAGES.map((language) => (
+              <Language
+                key={language.code}
+                type="button"
+                lang={language.htmlLang}
+                $active={language.code === lang}
+                aria-pressed={language.code === lang}
+                onClick={() => setLang(language.code)}
+              >
+                {language.label}
               </Language>
             ))}
           </Languages>
@@ -240,11 +249,20 @@ const Languages = styled.div`
 `;
 
 /** 선택된 언어만 흰색, 나머지는 흐리게. 구분선은 가상 요소로 그린다. */
-const Language = styled.span`
+const Language = styled.button`
   position: relative;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
   font-size: 11px;
   line-height: 16.5px;
   color: ${(props) => (props.$active ? "#fff" : "rgba(255, 255, 255, 0.3)")};
+  transition: color 0.25s ease;
+
+  &:hover {
+    color: ${(props) => (props.$active ? "#fff" : "rgba(255, 255, 255, 0.6)")};
+  }
 
   &:not(:last-child)::after {
     content: "";

@@ -8,6 +8,8 @@ import { formatKoreanDate, formatWon, formatWonRange, toErrorMessage } from "../
 import StepIndicator from "../components/StepIndicator";
 import backArrow from "../assets/icon_back_arrow.svg";
 import infoIcon from "../assets/icon_info.svg";
+import { useT } from "../i18n";
+import { reveal } from "../css/motion";
 
 const PHOTO_SLOTS = 3;
 
@@ -23,6 +25,7 @@ const FINAL_NOTES = [
 ];
 
 export default function AS_AiEstimate() {
+  const t = useT();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -62,7 +65,9 @@ export default function AS_AiEstimate() {
     {
       label: "보증 기간",
       value: data?.warrantyMonths
-        ? `${data.warrantyMonths / 12}년${data.warrantyScope ? ` (${data.warrantyScope})` : ""}`
+        ? `${t("{years}년", { years: data.warrantyMonths / 12 })}${
+            data.warrantyScope ? ` (${t(data.warrantyScope)})` : ""
+          }`
         : "—",
     },
     { label: "보증 적용 검토 결과", value: data?.warrantyVerdictLabel ?? "—" },
@@ -95,51 +100,51 @@ export default function AS_AiEstimate() {
       <Body>
         <BackLink type="button" onClick={() => navigate("/product-info")}>
           <BackArrow src={backArrow} alt="" />
-          제품 정보 입력으로
+          {t("제품 정보 입력으로")}
         </BackLink>
 
         <TopRow>
           <TopLeft>
-            <PageTitle>AI 예상 견적 결과</PageTitle>
+            <PageTitle>{t("AI 예상 견적 결과")}</PageTitle>
             <StepIndicator current={2} />
           </TopLeft>
 
           <Button type="button" onClick={handlePickupReservation} disabled={!data}>
-            AS 접수 시작하기
+            {t("AS 접수 시작하기")}
           </Button>
         </TopRow>
 
-        {loading && <StateBanner>견적을 불러오는 중…</StateBanner>}
+        {loading && <StateBanner>{t("견적을 불러오는 중…")}</StateBanner>}
         {!loading && error && (
           <StateBanner>
-            {toErrorMessage(error, "견적을 불러오지 못했습니다.")}
+            {t(toErrorMessage(error, "견적을 불러오지 못했습니다."))}
             {canRetry && (
               <Button type="button" onClick={handleRetry} disabled={retrying}>
-                {retrying ? "재분석 중…" : "견적 재분석"}
+                {retrying ? t("재분석 중…") : t("견적 재분석")}
               </Button>
             )}
           </StateBanner>
         )}
 
-        <Columns>
+        <Columns $pending={loading}>
           <LeftColumn>
             <Card>
               <CardHeader>
-                <CardHeaderInner>제품 정보 요약</CardHeaderInner>
+                <CardHeaderInner>{t("제품 정보 요약")}</CardHeaderInner>
               </CardHeader>
               <CardBody>
                 <PhotoGrid>
                   {Array.from({ length: PHOTO_SLOTS }, (_, idx) => (
                     <PhotoSlot key={photoUrlList[idx] ?? idx}>
-                      {photoUrlList[idx] && <PhotoImg src={photoUrlList[idx]} alt="제출 사진" />}
+                      {photoUrlList[idx] && <PhotoImg src={photoUrlList[idx]} alt={t("제출 사진")} />}
                     </PhotoSlot>
                   ))}
                 </PhotoGrid>
                 <SummaryGrid>
                   {summaryRows.map((row) => (
                     <SummaryItem key={row.label}>
-                      <SummaryLabel>{row.label}</SummaryLabel>
-                      <SummaryValue>{row.value}</SummaryValue>
+                      <SummaryLabel>{t(row.label)}</SummaryLabel>
+                      <SummaryValue>{t(row.value)}</SummaryValue>
                     </SummaryItem>
                   ))}
                 </SummaryGrid>
@@ -148,13 +153,13 @@ export default function AS_AiEstimate() {
 
             <Card>
               <CardHeader>
-                <CardHeaderInner>예상 수선 비용 범위</CardHeaderInner>
+                <CardHeaderInner>{t("예상 수선 비용 범위")}</CardHeaderInner>
               </CardHeader>
               <CardBody>
                 {/* AI 가 손상을 찾지 못하면 itemList 가 비고 금액이 0이다.
                     그대로 그리면 "₩0 – ₩0" 이 나오므로 안내 문구로 대체한다. */}
                 {data?.noDamageNotice ? (
-                  <MutedNote>{data.noDamageNotice}</MutedNote>
+                  <MutedNote>{t(data.noDamageNotice)}</MutedNote>
                 ) : (
                   <>
                     <CostList>
@@ -163,12 +168,12 @@ export default function AS_AiEstimate() {
                           key={item.repairItemName}
                           $divider={index < data.itemList.length - 1}
                         >
-                          <CostLabel>{item.repairItemName}</CostLabel>
+                          <CostLabel>{t(item.repairItemName)}</CostLabel>
                           <CostValue>
                             {/* estimatedPrice 는 손상 정도가 반영된 추정가.
                                 범위만 쓰면 경미/심각이 같은 금액으로 보인다. */}
                             {item.estimatedPrice != null && (
-                              <CostPrimary>약 {formatWon(item.estimatedPrice)}</CostPrimary>
+                              <CostPrimary>{t("약 {amount}", { amount: formatWon(item.estimatedPrice) })}</CostPrimary>
                             )}
                             <CostRange>{formatWonRange(item.minPrice, item.maxPrice)}</CostRange>
                           </CostValue>
@@ -176,10 +181,10 @@ export default function AS_AiEstimate() {
                       ))}
                       <CostTotalWrap>
                         <CostTotal>
-                          <CostTotalLabel>예상 합계</CostTotalLabel>
+                          <CostTotalLabel>{t("예상 합계")}</CostTotalLabel>
                           <CostTotalValue>
                             {data?.totalEstimatedPrice != null
-                              ? `약 ${formatWon(data.totalEstimatedPrice)}`
+                              ? t("약 {amount}", { amount: formatWon(data.totalEstimatedPrice) })
                               : data
                                 ? formatWonRange(data.totalMinPrice, data.totalMaxPrice)
                                 : "—"}
@@ -189,15 +194,17 @@ export default function AS_AiEstimate() {
                     </CostList>
 
                     <MutedNote>
-                      위 금액은 제출하신 사진을 기반으로 한 참고용 범위입니다. 실물 진단 결과에 따라 달라질 수 있습니다.
+                      {t(
+                        "위 금액은 제출하신 사진을 기반으로 한 참고용 범위입니다. 실물 진단 결과에 따라 달라질 수 있습니다.",
+                      )}
                     </MutedNote>
                   </>
                 )}
 
                 <NoteBlock>
-                  <NoteBlockTitle>비용 산정 참고 안내</NoteBlockTitle>
+                  <NoteBlockTitle>{t("비용 산정 참고 안내")}</NoteBlockTitle>
                   {COST_NOTES.map((note) => (
-                    <MutedNote key={note}>{note}</MutedNote>
+                    <MutedNote key={note}>{t(note)}</MutedNote>
                   ))}
                 </NoteBlock>
               </CardBody>
@@ -207,13 +214,13 @@ export default function AS_AiEstimate() {
           <RightColumn>
             <Card>
               <CardHeader>
-                <CardHeaderInner>AI 손상 유형 분석</CardHeaderInner>
+                <CardHeaderInner>{t("AI 손상 유형 분석")}</CardHeaderInner>
               </CardHeader>
               <CardBody $gap={0}>
                 {analysisRows.map((row, index) => (
                   <AnalysisRow key={row.label} $last={index === analysisRows.length - 1}>
-                    <AnalysisLabel>{row.label}</AnalysisLabel>
-                    <AnalysisValue>{row.value}</AnalysisValue>
+                    <AnalysisLabel>{t(row.label)}</AnalysisLabel>
+                    <AnalysisValue>{t(row.value)}</AnalysisValue>
                   </AnalysisRow>
                 ))}
               </CardBody>
@@ -221,30 +228,30 @@ export default function AS_AiEstimate() {
 
             <Card>
               <CardHeader>
-                <CardHeaderInner>보증 적용 가능 여부</CardHeaderInner>
+                <CardHeaderInner>{t("보증 적용 가능 여부")}</CardHeaderInner>
               </CardHeader>
               <CardBody>
                 <WarrantyBox>
                   {warrantyRows.map((row) => (
                     <WarrantyRow key={row.label}>
-                      <WarrantyLabel>{row.label}</WarrantyLabel>
-                      <WarrantyValue>{row.value}</WarrantyValue>
+                      <WarrantyLabel>{t(row.label)}</WarrantyLabel>
+                      <WarrantyValue>{t(row.value)}</WarrantyValue>
                     </WarrantyRow>
                   ))}
                 </WarrantyBox>
                 <WarrantyNoteList>
                   {(data?.warrantyNoteList ?? []).map((note) => (
-                    <WarrantyNoteItem key={note}>{note}</WarrantyNoteItem>
+                    <WarrantyNoteItem key={note}>{t(note)}</WarrantyNoteItem>
                   ))}
                 </WarrantyNoteList>
               </CardBody>
               <FinalNotice>
                 <FinalNoticeIcon src={infoIcon} alt="" />
                 <FinalNoticeBody>
-                  <FinalNoticeTitle>최종 견적 안내</FinalNoticeTitle>
+                  <FinalNoticeTitle>{t("최종 견적 안내")}</FinalNoticeTitle>
                   <FinalNoticeTexts>
                     {FINAL_NOTES.map((note) => (
-                      <FinalNoticeText key={note}>{note}</FinalNoticeText>
+                      <FinalNoticeText key={note}>{t(note)}</FinalNoticeText>
                     ))}
                   </FinalNoticeTexts>
                 </FinalNoticeBody>
@@ -364,6 +371,7 @@ const StateBanner = styled.div`
 `;
 
 const Columns = styled.div`
+  ${reveal}
   width: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

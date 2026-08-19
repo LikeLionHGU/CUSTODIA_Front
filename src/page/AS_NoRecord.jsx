@@ -5,8 +5,10 @@ import Button from "../components/Button";
 import AgentContactModal from "../components/AgentContactModal";
 import noRecordBg from "../assets/icon_norecord_bg.svg";
 import noRecordGlyph from "../assets/icon_norecord.svg";
+import { useT } from "../i18n";
 
 export default function AS_NoRecord() {
+  const t = useT();
   const navigate = useNavigate();
   const [contactOpen, setContactOpen] = useState(false);
 
@@ -19,11 +21,11 @@ export default function AS_NoRecord() {
             <IconGlyph src={noRecordGlyph} alt="" />
           </IconWrap>
           <IntroText>
-            <IntroTitle>연결된 AS 이력 없음</IntroTitle>
+            <IntroTitle>{t("연결된 AS 이력 없음")}</IntroTitle>
             <IntroDescription>
-              조회 가능한 이전 AS 접수 건이 없습니다.
+              {t("조회 가능한 이전 AS 접수 건이 없습니다.")}
               <br />
-              아래 방법으로 문제 해결을 도와드립니다.
+              {t("아래 방법으로 문제 해결을 도와드립니다.")}
             </IntroDescription>
           </IntroText>
         </Intro>
@@ -31,35 +33,35 @@ export default function AS_NoRecord() {
         <Options>
           <OptionList>
             <OptionCard>
-              <OptionTitle>구매 기록 확인</OptionTitle>
-              <OptionDescription>제품 구매 기록과 보증 정보를 먼저 확인하세요.</OptionDescription>
-              <Button type="button">구매 내역 보기</Button>
+              <OptionTitle>{t("구매 기록 확인")}</OptionTitle>
+              <OptionDescription>{t("제품 구매 기록과 보증 정보를 먼저 확인하세요.")}</OptionDescription>
+              <Button type="button">{t("구매 내역 보기")}</Button>
             </OptionCard>
 
             <OptionCard>
-              <OptionTitle>AI 컨시어지 상담</OptionTitle>
-              <OptionDescription>제품 문제를 설명하고 AI 상담을 받으세요.</OptionDescription>
+              <OptionTitle>{t("AI 컨시어지 상담")}</OptionTitle>
+              <OptionDescription>{t("제품 문제를 설명하고 AI 상담을 받으세요.")}</OptionDescription>
               {/* 명세 6-2: asNo 없이 상담을 시작하면 이력 없는 신규 상담(718) */}
               <Button type="button" onClick={() => navigate("/ai-concierge")}>
-                상담 시작하기
+                {t("상담 시작하기")}
               </Button>
             </OptionCard>
 
             <OptionCard>
-              <OptionTitle>상담원 직통 연결</OptionTitle>
-              <OptionDescription>전문 상담원과 전화 또는 채팅으로 연결됩니다.</OptionDescription>
+              <OptionTitle>{t("상담원 직통 연결")}</OptionTitle>
+              <OptionDescription>{t("전문 상담원과 전화 또는 채팅으로 연결됩니다.")}</OptionDescription>
               <TextLinkButton type="button" onClick={() => setContactOpen(true)}>
-                상담원 연결
+                {t("상담원 연결")}
               </TextLinkButton>
             </OptionCard>
           </OptionList>
 
           <BottomButtons>
             <Button type="button" variant="stroke" onClick={() => navigate(-1)}>
-              이전으로
+              {t("이전으로")}
             </Button>
             <Button type="button" onClick={() => navigate("/")}>
-              홈으로
+              {t("홈으로")}
             </Button>
           </BottomButtons>
         </Options>

@@ -14,6 +14,10 @@ import AS_NoRecord from "../page/AS_NoRecord";
 import AS_PickupReservation from "../page/AS_PickupReservation";
 import AS_ReservationComplete from "../page/AS_ReservationComplete";
 
+// vite 의 base 값. GitHub Pages 처럼 하위 경로에 올라가면 라우터도 그 밑에서 매칭해야 한다.
+// createBrowserRouter 는 끝 슬래시가 없는 형태를 기대하므로 떼어 낸다.
+const basename = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -83,6 +87,6 @@ const router = createBrowserRouter([
 
     ],
   },
-]);
+], { basename });
 
 export default router;
