@@ -7,8 +7,16 @@ import babel from '@rolldown/plugin-babel'
 
 // GitHub Pages 프로젝트 페이지는 저장소 이름이 경로에 붙는다.
 // (https://likelionhgu.github.io/MCMcare_Front/)
-// 다른 곳에 올리거나 커스텀 도메인을 쓸 때는 VITE_BASE_PATH 로 덮어쓴다.
+// 커스텀 도메인을 쓰면 루트가 되므로, 배포 워크플로가 actions/configure-pages 로
+// 실제 경로를 받아 VITE_BASE_PATH 로 넘겨준다. 값이 없을 때만 아래 기본값을 쓴다.
 const DEFAULT_BASE_PATH = '/MCMcare_Front/'
+
+/** 앞뒤 슬래시를 맞춘다. configure-pages 는 '/MCMcare_Front' 처럼 끝 슬래시 없이 준다. */
+function normalizeBasePath(value) {
+  if (!value) return DEFAULT_BASE_PATH
+  const withLeading = value.startsWith('/') ? value : `/${value}`
+  return withLeading.endsWith('/') ? withLeading : `${withLeading}/`
+}
 
 /**
  * GitHub Pages 에는 SPA 라우팅을 위한 서버 설정이 없다.
@@ -34,7 +42,7 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     // 개발 서버는 루트에서 돌고, 빌드 결과만 저장소 경로 밑으로 들어간다.
-    base: command === 'build' ? env.VITE_BASE_PATH || DEFAULT_BASE_PATH : '/',
+    base: command === 'build' ? normalizeBasePath(env.VITE_BASE_PATH) : '/',
     plugins: [
       react(),
       babel({ presets: [reactCompilerPreset()] }),
