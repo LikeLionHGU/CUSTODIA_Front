@@ -5,6 +5,8 @@ import { useApiQuery } from "../api/useApiQuery";
 import { formatKoreanDate, toErrorMessage } from "../api/format";
 import calendarIcon from "../assets/icon_calendar.svg";
 import infoIcon from "../assets/icon_info.svg";
+import backArrow from "../assets/icon_back_arrow.svg";
+import StepIndicator from "../components/StepIndicator";
 import safetyDriverId from "../assets/safety_driver_id.jpg";
 import safetyPhotoRecord from "../assets/safety_photo_record.jpg";
 import safetySignature from "../assets/safety_signature.jpg";
@@ -127,11 +129,62 @@ const Body = styled.div`
   box-sizing: border-box;
 `;
 
-const SectionTitle = styled.p`
+const BackLink = styled.button`
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 23px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 10px;
+  line-height: 10px;
+  color: #919191;
+  text-transform: uppercase;
+  cursor: pointer;
+`;
+
+const BackArrow = styled.img`
+  width: 8px;
+  height: 4px;
+  transform: rotate(90deg);
+`;
+
+const TopRow = styled.div`
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 38px;
+`;
+
+const TopLeft = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 155px;
+
+  @media (max-width: 1200px) {
+    gap: 32px;
+  }
+`;
+
+const PageTitle = styled.p`
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
+  font-size: 22px;
+  font-weight: 700;
+  color: #222;
+`;
+
+const SubmitError = styled.p`
+  width: 100%;
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: #c0392b;
 `;
 
 const Columns = styled.div`
@@ -209,11 +262,6 @@ const CardBody = styled.div`
   padding: 24px;
 `;
 
-const CardText = styled.p`
-  margin: 0;
-  font-size: 12px;
-  color: #1f2937;
-`;
 
 const ReceiptRow = styled.div`
   width: 100%;
@@ -413,11 +461,6 @@ const CalendarIcon = styled.img`
   height: 18px;
 `;
 
-const ChevronWrap = styled.span`
-  display: flex;
-  flex-shrink: 0;
-  pointer-events: none;
-`;
 
 const SelectChevronWrap = styled.span`
   position: absolute;
@@ -800,7 +843,20 @@ export default function AS_PickupReservation() {
     <Page>
       <BodyRow>
         <Body>
-          <SectionTitle>{t("픽업 예약")}</SectionTitle>
+          <BackLink type="button" onClick={() => navigate(-1)}>
+            <BackArrow src={backArrow} alt="" />
+            {t("AI 예상 견적 결과")}
+          </BackLink>
+
+          <TopRow>
+            <TopLeft>
+              <PageTitle>{t("픽업 예약")}</PageTitle>
+              <StepIndicator current={3} />
+            </TopLeft>
+            <Button type="button" disabled={!isFormValid || submitting} onClick={handleConfirm}>
+              {submitting ? t("예약 중…") : t("예약 확정하기")}
+            </Button>
+          </TopRow>
 
           <Columns>
             <LeftColumn>
@@ -1039,13 +1095,8 @@ export default function AS_PickupReservation() {
               </InfoPanel>
 
               {(submitError || formError) && (
-                <CardText role="alert" style={{ color: "#c0392b" }}>
-                  {submitError || t(toErrorMessage(formError))}
-                </CardText>
+                <SubmitError role="alert">{submitError || t(toErrorMessage(formError))}</SubmitError>
               )}
-              <Button type="button" disabled={!isFormValid} onClick={handleConfirm}>
-                {submitting ? t("예약 중…") : t("예약 확정")}
-              </Button>
             </RightColumn>
           </Columns>
         </Body>

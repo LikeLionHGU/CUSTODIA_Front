@@ -16,13 +16,28 @@ const LINK_COLUMNS = [
   },
   {
     title: "고객 지원",
-    // 아직 해당 화면이 없어 링크 대상이 정해지지 않은 항목들
+    // 앱 안에 화면이 없는 문서들 — 외부 노션 페이지로 새 탭에서 연다
     links: [
-      { label: "자주 묻는 질문" },
-      { label: "수선 가이드" },
-      { label: "보증 정책 안내" },
-      { label: "개인정보 처리방침" },
-      { label: "이용약관" },
+      {
+        label: "자주 묻는 질문",
+        href: "https://dongwon0507.notion.site/FAQ-3c21251199de807d96b7e351b1554baa?source=copy_link",
+      },
+      {
+        label: "수선 가이드",
+        href: "https://dongwon0507.notion.site/3c21251199de8077b7efe70c9c49059a?source=copy_link",
+      },
+      {
+        label: "보증 정책 안내",
+        href: "https://app.notion.com/p/dongwon0507/3c21251199de80cdb6dcfdf47a30ea63",
+      },
+      {
+        label: "개인정보 처리방침",
+        href: "https://dongwon0507.notion.site/3c21251199de8035823fc0531bc4cd18?source=copy_link",
+      },
+      {
+        label: "이용약관",
+        href: "https://dongwon0507.notion.site/3c21251199de800cac1afd9d240d7063?source=copy_link",
+      },
     ],
   },
 ];
@@ -48,15 +63,28 @@ export default function Footer() {
             <Column key={column.title}>
               <ColumnTitle>{t(column.title)}</ColumnTitle>
               <LinkList>
-                {column.links.map((link) =>
-                  link.to ? (
-                    <FooterLink key={link.label} to={link.to}>
-                      {t(link.label)}
-                    </FooterLink>
-                  ) : (
-                    <FooterText key={link.label}>{t(link.label)}</FooterText>
-                  ),
-                )}
+                {column.links.map((link) => {
+                  if (link.to) {
+                    return (
+                      <FooterLink key={link.label} to={link.to}>
+                        {t(link.label)}
+                      </FooterLink>
+                    );
+                  }
+                  if (link.href) {
+                    return (
+                      <FooterExternalLink
+                        key={link.label}
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {t(link.label)}
+                      </FooterExternalLink>
+                    );
+                  }
+                  return <FooterText key={link.label}>{t(link.label)}</FooterText>;
+                })}
               </LinkList>
             </Column>
           ))}
@@ -174,12 +202,23 @@ const footerItem = `
   color: rgba(255, 255, 255, 0.5);
 `;
 
-const FooterLink = styled(Link)`
-  ${footerItem}
+const footerLinkHover = `
+  transition: color 0.2s ease;
 
   &:hover {
     color: rgba(255, 255, 255, 0.8);
   }
+`;
+
+const FooterLink = styled(Link)`
+  ${footerItem}
+  ${footerLinkHover}
+`;
+
+/** 노션 등 외부 문서. 색·호버는 내부 링크와 같게 둔다. */
+const FooterExternalLink = styled.a`
+  ${footerItem}
+  ${footerLinkHover}
 `;
 
 const FooterText = styled.p`

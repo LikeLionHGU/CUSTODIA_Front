@@ -1,5 +1,5 @@
 // 1. Member — 회원 (`/api/member`)
-import { get, post, put, setAccessToken, clearAccessToken } from "./client";
+import { get, post, put, del, setAccessToken, clearAccessToken } from "./client";
 
 /** 1-1. POST /api/member/signup · 인증 불필요 → { memberId } */
 export const signup = (payload) => post("/member/signup", payload, { auth: false });
@@ -44,5 +44,28 @@ export const getHome = () => get("/member/home");
 /** 1-4. GET /api/member/info */
 export const getInfo = () => get("/member/info");
 
-/** 1-5. PUT /api/member → { memberId } */
+/** 1-5. PUT /api/member — name·phone·agreedMarketing 만 받는다 → { memberId } */
 export const updateInfo = (payload) => put("/member", payload);
+
+/**
+ * 1-6. PUT /api/member/password — 비밀번호 변경
+ *
+ * 서버에 아직 없는 엔드포인트다. 화면은 이 래퍼에 맞춰 완성해 두었으니
+ * 백엔드가 아래 계약대로 추가되면 프론트는 손대지 않아도 된다.
+ *   요청  { currentPassword, newPassword }
+ *   응답  200 · 401 INVALID_CREDENTIALS · 400 VALIDATION_FAILED
+ */
+export const changePassword = ({ currentPassword, newPassword }) =>
+  put("/member/password", { currentPassword, newPassword });
+
+/**
+ * 1-7. DELETE /api/member — 회원탈퇴
+ *
+ * 서버에 아직 없는 엔드포인트다. 계약은 바디 없이 Authorization 토큰으로만 본인을 확인한다.
+ * (구글 로그인 계정에는 비밀번호가 없어 비밀번호 재확인 방식을 쓰지 않는다)
+ * 성공하면 로컬 토큰도 버려 로그아웃 상태로 되돌린다.
+ */
+export async function withdraw() {
+  await del("/member");
+  clearAccessToken();
+}

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import styled from "styled-components";
 
+import { isAuthenticated } from "../api/client";
 import { useLanguage } from "../i18n";
 import Logo from "../assets/logo_custodia.svg";
 import Profile from "../assets/icon_profile.svg";
@@ -23,6 +24,10 @@ export default function Header() {
   const [animated, setAnimated] = useState(false);
 
   const activeIndex = NAV_ITEMS.findIndex((item) => item.to === pathname);
+
+  // 토큰은 localStorage 에 있어 렌더 중 읽어도 된다.
+  // 로그인·로그아웃 뒤에는 화면이 이동하므로 pathname 이 바뀔 때 다시 확인된다.
+  const loggedIn = isAuthenticated();
 
   /**
    * 활성 메뉴의 위치·너비를 재서 밑줄에 그대로 넘긴다.
@@ -90,7 +95,11 @@ export default function Header() {
           />
         </Nav>
 
-        <ProfileLink to="/login" aria-label={t("로그인")}>
+        {/* 로그인 상태면 마이페이지, 아니면 로그인 화면으로 보낸다 */}
+        <ProfileLink
+          to={loggedIn ? "/my-page" : "/login"}
+          aria-label={loggedIn ? t("마이페이지") : t("로그인")}
+        >
           <ProfileImage src={Profile} alt="" />
         </ProfileLink>
       </RightGroup>
