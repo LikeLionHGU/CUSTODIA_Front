@@ -39,7 +39,7 @@ export default function ConfirmWithdrawModal({ open, onClose, onConfirm, submitt
 
       <Field>
         <FieldLabel htmlFor="withdraw-confirm">
-          {t("계속하려면 {word} 를 입력해 주세요.", { word: confirmWord })}
+          {t("계속하려면 ‘{word}’를 입력해 주세요.", { word: confirmWord })}
         </FieldLabel>
         <Input
           id="withdraw-confirm"
