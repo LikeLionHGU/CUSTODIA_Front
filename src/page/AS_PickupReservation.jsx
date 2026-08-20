@@ -568,7 +568,11 @@ const SafetyItem = styled.div`
 
 const SafetyImage = styled.img`
   width: 100%;
-  height: 110px;
+  /* 원본이 400x280(10:7)이다. 높이를 고정하면 열 너비에 따라 비율이 어긋나
+     위아래가 잘려 나가므로, 박스 비율을 원본에 맞춰 잘림 없이 담는다.
+     (디자인의 110px 보다 조금 높아지지만 사진이 온전히 보인다) */
+  aspect-ratio: 10 / 7;
+  height: auto;
   object-fit: cover;
   display: block;
   background: #f2f2f0;
