@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import styled, { css } from "styled-components";
 
 import Button from "../components/Button";
+import sampleProductImage from "../assets/product_stark_backpack.avif";
 import StatusLabel from "../components/StatusLabel";
 import * as asCaseApi from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
@@ -14,6 +15,70 @@ const LOCATION_NOTICE = {
   body: "수선 업체 내부 일정에 따라 세부 위치 정보가 일부 제공되지 않을 수 있습니다. 갱신 시 즉시 반영됩니다.",
 };
 
+/**
+ * 접수번호 없이 이 주소로 바로 들어왔을 때 쓰는 표본 데이터 (디자인 616:13032 의 내용).
+ *
+ * 접수번호가 있으면 서버 응답만 쓴다 — 조회가 실패했는데 표본으로 덮으면
+ * 실제 접수 건의 값처럼 보여 오해를 만든다.
+ */
+const SAMPLE_DETAIL = {
+  asNo: "MCM-2024-009341",
+  modelName: "MCM 클래식 백팩",
+  photoUrl: sampleProductImage,
+  createdAt: "2024-11-12",
+  intakeType: "픽업 수거 접수",
+  status: "REPAIRING",
+  statusLabel: "수선중",
+  expectedCompletedAt: "2024-12-03",
+  expectedUpdatedAt: "2024-11-20",
+  currentLocation: "MCM 서울 수선 센터",
+  locationStatus: "수선 작업 중",
+  historyList: [
+    {
+      status: "RECEIVED",
+      statusLabel: "접수 완료",
+      occurredAt: "2024-11-12",
+      description: "픽업 예약 후 제품 수거 완료",
+      completed: true,
+    },
+    {
+      status: "PICKED_UP",
+      statusLabel: "픽업 완료",
+      occurredAt: "2024-11-12",
+      description: "픽업 예약 후 제품 수거 완료",
+      completed: true,
+    },
+    {
+      status: "DIAGNOSED",
+      statusLabel: "손상 부위 진단 완료",
+      occurredAt: "2024-11-14",
+      description: "제품 상태 및 손상 부위 사진 기록 완료",
+      completed: true,
+    },
+    {
+      status: "REPAIRING",
+      statusLabel: "수선 진행 중",
+      occurredAt: "2024-11-18",
+      description: "MCM 서울 수선 센터에서 작업 중",
+      completed: true,
+    },
+    {
+      status: "INSPECTING",
+      statusLabel: "품질 검수",
+      occurredAt: null,
+      description: "수선 완료 후 품질 기준 최종 점검",
+      completed: false,
+    },
+    {
+      status: "SHIPPING",
+      statusLabel: "발송",
+      occurredAt: null,
+      description: "검수 완료 후 고객 배송 진행",
+      completed: false,
+    },
+  ],
+};
+
 export default function AS_MyDetail() {
   const t = useT();
   const navigate = useNavigate();
@@ -21,10 +86,13 @@ export default function AS_MyDetail() {
 
   const asNo = location.state?.asNo;
 
-  const { data, loading, error } = useApiQuery(
-    () => (asNo ? asCaseApi.getDetail(asNo) : Promise.reject(new Error("접수 번호가 없습니다."))),
+  const { data: fetched, loading, error } = useApiQuery(
+    () => (asNo ? asCaseApi.getDetail(asNo) : Promise.resolve(null)),
     [asNo],
   );
+
+  // 접수번호를 들고 들어왔으면 서버 응답만, 아니면 표본을 보여 준다
+  const data = asNo ? fetched : SAMPLE_DETAIL;
 
   const historyList = data?.historyList ?? [];
   // 완료된 단계 중 마지막이 현재 단계다
@@ -35,16 +103,20 @@ export default function AS_MyDetail() {
 
   const handleGoToList = () => navigate("/my-as-list");
 
-  /** 이 접수 건의 AI 견적을 다시 본다 — 접수 흐름이 아니라 조회이므로 review 로 표시한다. */
+  /**
+   * 이 접수 건의 AI 견적을 다시 본다 — 접수 흐름이 아니라 조회이므로 review 로 표시한다.
+   * 표본을 보여 주는 중이면 접수번호를 넘기지 않는다. 넘기면 견적 화면이 없는 건을
+   * 조회하다 실패한다 — 그쪽도 접수번호가 없으면 표본을 보여 준다.
+   */
   const handleReviewEstimate = () => {
-    navigate("/ai-estimate", { state: { asNo: data?.asNo ?? asNo, review: true } });
+    navigate("/ai-estimate", { state: { asNo: asNo ? (data?.asNo ?? asNo) : undefined, review: true } });
   };
 
   // 명세 3-6: 이 버튼은 POST /api/chat 에 asNo 를 담아 호출한다
   const handleConsult = () => {
     navigate("/ai-concierge", {
       state: {
-        asNo: data?.asNo ?? asNo,
+        asNo: asNo ? (data?.asNo ?? asNo) : undefined,
         modelName: data?.modelName,
         statusLabel: data?.statusLabel,
       },

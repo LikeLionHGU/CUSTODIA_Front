@@ -9,6 +9,7 @@ import StepIndicator from "../components/StepIndicator";
 import DamageDetailModal from "../components/DamageDetailModal";
 import backArrow from "../assets/icon_back_arrow.svg";
 import infoIcon from "../assets/icon_info.svg";
+import sampleProductImage from "../assets/product_stark_backpack.avif";
 import { useT } from "../i18n";
 import { reveal } from "../css/motion";
 
@@ -25,6 +26,35 @@ const FINAL_NOTES = [
   "실물 진단 후 최종 견적은 달라질 수 있으며, 최종 견적 확인 후 수선 진행 여부를 결정할 수 있습니다.",
 ];
 
+/**
+ * 접수번호 없이 이 주소로 바로 들어왔을 때 쓰는 표본 데이터 (디자인 627:2129 의 내용).
+ * `AS_MyDetail` 과 같은 규칙 — 접수번호가 있으면 서버 응답만 쓴다.
+ */
+const SAMPLE_ESTIMATE = {
+  asNo: "MCM-2024-008821",
+  modelName: "MCM 클래식 백팩 미디엄",
+  photoUrlList: [sampleProductImage],
+  damageCategory: "핸들 및 스트랩 연결부",
+  damageSeverity: "중간 — 부분 수선 가능 수준",
+  confidenceGrade: "높음",
+  confidenceNote: "제출 사진 3장 기반",
+  itemList: [
+    { repairItemName: "하드웨어 교체", minPrice: 80000, maxPrice: 120000 },
+    { repairItemName: "스티칭 수선", minPrice: 40000, maxPrice: 70000 },
+  ],
+  totalMinPrice: 120000,
+  totalMaxPrice: 190000,
+  purchasedAt: "2023-04-15",
+  warrantyMonths: 24,
+  warrantyScope: "제조 결함 한정",
+  warrantyVerdictLabel: "부분 보증 적용 가능성 있음",
+  warrantyNoteList: [
+    "하드웨어 마모는 정상 사용에 따른 소모로 분류될 경우 보증 적용이 제한될 수 있습니다.",
+    "스티칭 분리가 제조 결함으로 확인되면 해당 항목에 한해 무상 수선이 적용됩니다.",
+    "보증 적용 여부는 입고 후 담당 수선 전문가의 실물 진단에서 최종 확정됩니다.",
+  ],
+};
+
 export default function AS_AiEstimate() {
   const t = useT();
   const navigate = useNavigate();
@@ -39,10 +69,15 @@ export default function AS_AiEstimate() {
    */
   const review = !!location.state?.review;
 
-  const { data, loading, error, reload } = useApiQuery(
-    () => (asNo ? asCase.getEstimate(asNo) : Promise.reject(new Error("접수 번호가 없습니다."))),
-    [asNo],
-  );
+  const {
+    data: fetched,
+    loading,
+    error,
+    reload,
+  } = useApiQuery(() => (asNo ? asCase.getEstimate(asNo) : Promise.resolve(null)), [asNo]);
+
+  // 접수번호를 들고 들어왔으면 서버 응답만, 아니면 표본을 보여 준다
+  const data = asNo ? fetched : SAMPLE_ESTIMATE;
 
   const [retrying, setRetrying] = useState(false);
   const [damageModalOpen, setDamageModalOpen] = useState(false);
