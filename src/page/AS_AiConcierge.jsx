@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import styled, { css } from "styled-components";
 import Button from "../components/Button";
 import AgentContactModal from "../components/AgentContactModal";
+import aiAvatar from "../assets/icon_ai_avatar.svg";
 import * as chat from "../api/chat";
 import { useApiQuery } from "../api/useApiQuery";
 import { toErrorMessage } from "../api/format";
@@ -89,6 +90,9 @@ export default function AS_AiConcierge() {
         </TitleRow>
 
         <Content>
+          {/* 접수 건을 지정해 들어온 경우에만 요약을 보여 준다.
+              이력 없는 신규 상담에서는 채울 값이 없어 "—" 만 남는다. */}
+          {asNo && (
           <CaseStrip>
             {caseInfo.map((item) => (
               <CaseField key={item.label}>
@@ -97,6 +101,7 @@ export default function AS_AiConcierge() {
               </CaseField>
             ))}
           </CaseStrip>
+          )}
 
           <ChatBox ref={chatBoxRef}>
             {loading && <StateText>{t("상담을 준비하는 중…")}</StateText>}
@@ -107,7 +112,7 @@ export default function AS_AiConcierge() {
             {messages.map((message, index) =>
               message.role === "AI" ? (
                 <AiRow key={index}>
-                  <Avatar />
+                  <Avatar src={aiAvatar} alt="" />
                   <AiBubble>{message.content}</AiBubble>
                 </AiRow>
               ) : (
@@ -160,11 +165,11 @@ const Body = styled.div`
   width: 100%;
   max-width: 894px;
   margin: 0 auto;
-  padding: 52px 48px;
+  padding: 60px 48px 240px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 36px;
 `;
 
 const TitleRow = styled.div`
@@ -241,7 +246,7 @@ const CaseValue = styled.p`
  */
 const ChatBox = styled.div`
   ${Panel}
-  height: clamp(360px, 52vh, 560px);
+  height: clamp(360px, 52vh, 480px);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -272,12 +277,12 @@ const AiRow = styled.div`
   gap: 12px;
 `;
 
-const Avatar = styled.div`
+/** 디자인의 CUSTODIA 모노그램 아바타 (원 + 흰 C 가 에셋에 함께 들어 있다) */
+const Avatar = styled.img`
   flex-shrink: 0;
   width: 36px;
   height: 36px;
-  background: #222;
-  border-radius: 999px;
+  display: block;
 `;
 
 const AiBubble = styled.p`

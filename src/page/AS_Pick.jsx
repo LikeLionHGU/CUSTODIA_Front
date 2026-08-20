@@ -90,7 +90,9 @@ export default function AS_Pick() {
 
           <EmptyCard>
             <EmptyText>{t("접수 건 없이 신규 상담을 시작하시겠습니까?")}</EmptyText>
-            <EmptyLink type="button" onClick={() => navigate("/no-record")}>
+            {/* 접수 건을 고르지 않고 바로 상담을 시작한다 — asNo 없이 들어가면
+                서버가 이력 없는 신규 상담 인사말을 준다 (명세 6-2) */}
+            <EmptyLink type="button" onClick={() => navigate("/ai-concierge")}>
               {t("AS 이력이 없어요")}
             </EmptyLink>
           </EmptyCard>
