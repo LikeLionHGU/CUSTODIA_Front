@@ -100,33 +100,25 @@ function formatPhoneNumber(digits) {
 
 const Page = styled.div`
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.08);
-  /* overflow: hidden 을 두면 RightColumn 의 position: sticky 가 동작하지 않는다 */
+  min-height: 100%;
+  background: #f9f9f9;
   box-sizing: border-box;
   text-align: left;
 `;
 
-const BodyRow = styled.div`
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-`;
 
 const Body = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 27px 48px 60px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 24px;
-  box-sizing: border-box;
+
+  @media (max-width: 640px) {
+    padding: 24px 18px 48px;
+  }
 `;
 
 const BackLink = styled.button`
@@ -203,14 +195,14 @@ const LeftColumn = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 32px;
 `;
 
 const RightColumn = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 32px;
   /* 왼쪽 폼을 스크롤해도 예약 요약이 따라오도록 고정한다 (헤더 80px + 여백 16px) */
   position: sticky;
   top: 96px;
@@ -845,8 +837,7 @@ export default function AS_PickupReservation() {
 
   return (
     <Page>
-      <BodyRow>
-        <Body>
+      <Body>
           <BackLink type="button" onClick={() => navigate(-1)}>
             <BackArrow src={backArrow} alt="" />
             {t("AI 예상 견적 결과")}
@@ -1103,8 +1094,7 @@ export default function AS_PickupReservation() {
               )}
             </RightColumn>
           </Columns>
-        </Body>
-      </BodyRow>
+      </Body>
     </Page>
   );
 }
