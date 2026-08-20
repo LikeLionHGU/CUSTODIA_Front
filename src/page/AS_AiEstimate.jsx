@@ -6,6 +6,7 @@ import * as asCase from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
 import { formatKoreanDate, formatWon, formatWonRange, toErrorMessage } from "../api/format";
 import StepIndicator from "../components/StepIndicator";
+import DamageDetailModal from "../components/DamageDetailModal";
 import backArrow from "../assets/icon_back_arrow.svg";
 import infoIcon from "../assets/icon_info.svg";
 import { useT } from "../i18n";
@@ -38,13 +39,15 @@ export default function AS_AiEstimate() {
   );
 
   const [retrying, setRetrying] = useState(false);
+  const [damageModalOpen, setDamageModalOpen] = useState(false);
 
   const photoUrlList = data?.photoUrlList ?? [];
 
   const summaryRows = [
     { label: "제품명", value: data?.modelName ?? "—" },
     { label: "접수 번호", value: data?.asNo ?? asNo ?? "—" },
-    { label: "손상 부위", value: data?.damagePart ?? "—" },
+    // 요약과 분석 카드가 서로 다른 문구를 보여 주지 않도록, AI 가 분류한 유형을 함께 쓴다
+    { label: "손상 부위", value: data?.damageCategory ?? "—" },
   ];
 
   const analysisRows = [
@@ -91,8 +94,23 @@ export default function AS_AiEstimate() {
     }
   };
 
+  // 명세 3-3: AI 가 손상을 못 찾으면 noDamageNotice 가 내려온다
+  const damageUnidentified = !!data?.noDamageNotice;
+
+  const goToPickup = (damageNote) => {
+    navigate("/pickup-reservation", {
+      state: { asNo: data?.asNo ?? asNo, ...(damageNote ? { damageNote } : {}) },
+    });
+  };
+
   const handlePickupReservation = () => {
-    navigate("/pickup-reservation", { state: { asNo: data?.asNo ?? asNo } });
+    // 손상을 못 찾은 채로 넘어가면 수선센터가 판단할 근거가 없다.
+    // 넘어가기 전에 손상 내용을 한 번 더 받는다.
+    if (damageUnidentified) {
+      setDamageModalOpen(true);
+      return;
+    }
+    goToPickup();
   };
 
   return (
@@ -104,14 +122,15 @@ export default function AS_AiEstimate() {
         </BackLink>
 
         <TopRow>
-          <TopLeft>
-            <PageTitle>{t("AI 예상 견적 결과")}</PageTitle>
+          <PageTitle>{t("AI 예상 견적 결과")}</PageTitle>
+          <StepWrap>
             <StepIndicator current={2} />
-          </TopLeft>
-
-          <Button type="button" onClick={handlePickupReservation} disabled={!data}>
-            {t("AS 접수 시작하기")}
-          </Button>
+          </StepWrap>
+          <TopActions>
+            <Button type="button" onClick={handlePickupReservation} disabled={!data}>
+              {t("AS 접수 시작하기")}
+            </Button>
+          </TopActions>
         </TopRow>
 
         {loading && <StateBanner>{t("견적을 불러오는 중…")}</StateBanner>}
@@ -260,6 +279,15 @@ export default function AS_AiEstimate() {
           </RightColumn>
         </Columns>
       </Body>
+
+      <DamageDetailModal
+        open={damageModalOpen}
+        onClose={() => setDamageModalOpen(false)}
+        onSubmit={(damageNote) => {
+          setDamageModalOpen(false);
+          goToPickup(damageNote);
+        }}
+      />
     </Page>
   );
 }
@@ -313,24 +341,37 @@ const BackArrow = styled.img`
   transform: rotate(90deg);
 `;
 
+/**
+ * 제목 · 단계 표시 · 액션 버튼.
+ * 양쪽 칸을 같은 1fr 로 두어, 제목과 버튼의 글자 수가 달라져도(언어 전환 포함)
+ * 가운데 단계 표시가 화면 중앙에 그대로 머문다.
+ */
 const TopRow = styled.div`
   width: 100%;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 24px;
   margin-bottom: 32px;
-`;
-
-const TopLeft = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 147px;
 
   @media (max-width: 1200px) {
-    gap: 32px;
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 20px;
+  }
+`;
+
+const StepWrap = styled.div`
+  display: flex;
+  justify-content: center;
+`;
+
+const TopActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+
+  @media (max-width: 1200px) {
+    justify-content: flex-start;
   }
 `;
 

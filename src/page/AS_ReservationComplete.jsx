@@ -85,13 +85,15 @@ export default function AS_ReservationComplete() {
         </BackLink>
 
         <TopRow>
-          <TopLeft>
-            <PageTitle>{t("픽업 예약 완료")}</PageTitle>
+          <PageTitle>{t("픽업 예약 완료")}</PageTitle>
+          <StepWrap>
             <StepIndicator current={4} />
-          </TopLeft>
-          <Button type="button" onClick={() => navigate("/my-as-list")}>
-            {t("확인")}
-          </Button>
+          </StepWrap>
+          <TopActions>
+            <Button type="button" onClick={() => navigate("/my-as-list")}>
+              {t("확인")}
+            </Button>
+          </TopActions>
         </TopRow>
 
         {loading && <StateBanner>{t("예약 정보를 불러오는 중…")}</StateBanner>}
@@ -199,24 +201,37 @@ const BackArrow = styled.img`
   transform: rotate(90deg);
 `;
 
+/**
+ * 제목 · 단계 표시 · 액션 버튼.
+ * 양쪽 칸을 같은 1fr 로 두어, 제목과 버튼의 글자 수가 달라져도(언어 전환 포함)
+ * 가운데 단계 표시가 화면 중앙에 그대로 머문다.
+ */
 const TopRow = styled.div`
   width: 100%;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 24px;
   margin-bottom: 38px;
-`;
-
-const TopLeft = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 155px;
 
   @media (max-width: 1200px) {
-    gap: 32px;
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 20px;
+  }
+`;
+
+const StepWrap = styled.div`
+  display: flex;
+  justify-content: center;
+`;
+
+const TopActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+
+  @media (max-width: 1200px) {
+    justify-content: flex-start;
   }
 `;
 

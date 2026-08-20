@@ -13,6 +13,18 @@ import { useT } from "../i18n";
 // 명세 1-5: PUT /api/member 는 이 세 가지만 받는다. 이메일·생년월일은 변경 대상이 아니다.
 const MIN_PASSWORD_LENGTH = 8;
 
+/**
+ * 명세 1-6: 비밀번호 변경 실패 코드.
+ * 클라이언트에서 먼저 걸러내는 조건도 서버가 다시 검증하므로 양쪽 문구를 맞춰 둔다.
+ * `{n}` 자리표시자는 아래 호출부에서 채운다.
+ */
+const PASSWORD_ERRORS = {
+  INVALID_CREDENTIALS: "현재 비밀번호가 올바르지 않습니다.",
+  SOCIAL_PASSWORD_NOT_ALLOWED: "구글 계정으로 가입하셨습니다. 비밀번호는 구글에서 관리해 주세요.",
+  SAME_AS_CURRENT_PASSWORD: "현재 비밀번호와 다른 비밀번호를 입력해 주세요.",
+  VALIDATION_FAILED: "새 비밀번호는 {n}자 이상이어야 합니다.",
+};
+
 /** 숫자와 하이픈만 남긴다. 서버는 하이픈 없는 숫자를 기대한다. */
 function normalizePhone(value) {
   return value.replace(/[^\d-]/g, "");
@@ -123,10 +135,10 @@ export default function MCM_MyPage() {
       setPassword({ current: "", next: "", confirm: "" });
       setPasswordDone(true);
     } catch (err) {
-      // 명세 부록 C: 현재 비밀번호가 틀리면 401 INVALID_CREDENTIALS
+      const known = PASSWORD_ERRORS[err.code];
       setPasswordError(
-        err.code === "INVALID_CREDENTIALS"
-          ? t("현재 비밀번호가 올바르지 않습니다.")
+        known
+          ? t(known, { n: MIN_PASSWORD_LENGTH })
           : t(toErrorMessage(err, "비밀번호를 변경하지 못했습니다.")),
       );
     } finally {

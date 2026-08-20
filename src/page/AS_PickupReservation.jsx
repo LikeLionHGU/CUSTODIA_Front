@@ -238,6 +238,15 @@ const Card = styled.div`
   border-radius: var(--radius-card);
 `;
 
+/**
+ * 날짜 선택 달력이 카드 밖으로 펼쳐지는 카드.
+ * 다른 카드처럼 overflow: hidden 을 두면 달력 아래쪽이 잘린다.
+ * 이 카드 안에는 클리핑이 필요한 이미지가 없어 그대로 열어 둔다.
+ */
+const DateCard = styled(Card)`
+  overflow: visible;
+`;
+
 const CardHeader = styled.div`
   width: 100%;
   box-sizing: border-box;
@@ -754,7 +763,9 @@ export default function AS_PickupReservation() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [addressDetail, setAddressDetail] = useState("");
-  const [note, setNote] = useState("");
+  // 712에서 손상 내용을 다시 적어 넘어왔으면 전달 사항의 기본값으로 쓴다.
+  // (접수 건의 손상 설명을 고치는 API 가 없어 이 경로로 수선센터에 전달한다)
+  const [note, setNote] = useState(location.state?.damageNote ?? "");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -898,7 +909,7 @@ export default function AS_PickupReservation() {
                 </CardBody>
               </Card>
 
-              <Card>
+              <DateCard>
                 <CardHeader>
                   <CardHeaderInner>{t("픽업 일시 선택")}</CardHeaderInner>
                 </CardHeader>
@@ -999,7 +1010,7 @@ export default function AS_PickupReservation() {
                   <FieldHint>{t("기사님이 해당 전화번호로 연락을 드릴 예정입니다.")}</FieldHint>
                 </FieldGroup>
                 </CardBody>
-              </Card>
+              </DateCard>
 
               <Card>
                 <CardHeader>

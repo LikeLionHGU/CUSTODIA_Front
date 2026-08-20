@@ -49,20 +49,18 @@ export const updateInfo = (payload) => put("/member", payload);
 
 /**
  * 1-6. PUT /api/member/password — 비밀번호 변경
- *
- * 서버에 아직 없는 엔드포인트다. 화면은 이 래퍼에 맞춰 완성해 두었으니
- * 백엔드가 아래 계약대로 추가되면 프론트는 손대지 않아도 된다.
  *   요청  { currentPassword, newPassword }
- *   응답  200 · 401 INVALID_CREDENTIALS · 400 VALIDATION_FAILED
+ *   성공  200 { message }
+ *   실패  401 INVALID_CREDENTIALS · 400 SOCIAL_PASSWORD_NOT_ALLOWED
+ *         400 SAME_AS_CURRENT_PASSWORD · 400 VALIDATION_FAILED(8자 미만)
  */
 export const changePassword = ({ currentPassword, newPassword }) =>
   put("/member/password", { currentPassword, newPassword });
 
 /**
  * 1-7. DELETE /api/member — 회원탈퇴
- *
- * 서버에 아직 없는 엔드포인트다. 계약은 바디 없이 Authorization 토큰으로만 본인을 확인한다.
- * (구글 로그인 계정에는 비밀번호가 없어 비밀번호 재확인 방식을 쓰지 않는다)
+ * 바디 없이 Authorization 토큰으로 본인을 확인한다 → 200 { message }
+ * 구글 로그인 계정도 같은 경로를 쓴다.
  * 성공하면 로컬 토큰도 버려 로그아웃 상태로 되돌린다.
  */
 export async function withdraw() {

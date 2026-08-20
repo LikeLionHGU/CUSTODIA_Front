@@ -17,8 +17,8 @@ import removeIcon from "../assets/icon_remove.svg";
 import infoIcon from "../assets/icon_info.svg";
 
 // 명세 3-2: images 는 1~4장. 5장 이상이면 400 TOO_MANY_PHOTOS
-// 종류 조합도 강제된다 — PRODUCT 1장 이상 + DAMAGE 1장 이상 (400 PHOTO_TYPE_REQUIRED)
 const MAX_PHOTOS = 4;
+const MIN_PHOTOS = 1;
 
 const PRODUCT_FIELDS = [
   {
@@ -45,7 +45,7 @@ const DAMAGE_FIELDS = [
   { key: "damageType", label: "손상 유형", type: "select", optionKey: "damageTypeList", full: true },
   {
     key: "damageDescription",
-    label: "손상 경위 및 상태 설명",
+    label: "손상 경위 및 상태 설명 (선택)",
     type: "area",
     placeholder: "손상이 발생한 경위와 현재 상태를 자세히 기술해 주세요.",
     full: true,
@@ -126,6 +126,10 @@ export default function AS_ProductInfo() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  // 사진 장수가 모자란 채 제출을 눌렀을 때, 업로드 카드의 안내 문구를 붉게 표시한다.
+  // 사진을 추가하면 다시 원래 색으로 돌아간다.
+  const [photoWarning, setPhotoWarning] = useState(false);
+
   /**
    * 접수 내용은 "예상 견적 확인하기" 를 누를 때만 서버로 올라간다.
    * 중간 저장이 없으므로, 뭔가 입력한 상태로 화면을 벗어나면 입력값은 사라진다.
@@ -204,6 +208,7 @@ export default function AS_ProductInfo() {
       return [...prev, ...newPhotos];
     });
 
+    setPhotoWarning(false);
     e.target.value = "";
   };
 
@@ -218,9 +223,9 @@ export default function AS_ProductInfo() {
   const handleSubmit = async () => {
     if (submitting) return;
 
-    // 첫 장이 PRODUCT 로 나가므로 최소 2장이어야 조합 제약을 만족한다
-    if (photos.length < 2) {
-      setSubmitError(t("전체 제품 사진 1장과 손상 부위 사진을 최소 1장 이상 첨부해 주세요."));
+    if (photos.length < MIN_PHOTOS) {
+      // 같은 문구가 업로드 카드에 이미 있으므로 하단에 또 띄우지 않고 그 문구를 강조한다
+      setPhotoWarning(true);
       return;
     }
 
@@ -232,6 +237,8 @@ export default function AS_ProductInfo() {
       const request = {
         ...formData,
         warrantyNo: formData.warrantyNo.trim() || null,
+        // 선택 항목이라 비어 있으면 빈 문자열 대신 null 로 보낸다
+        damageDescription: formData.damageDescription.trim() || null,
         photoTypeList: photos.map((_, index) => (index === 0 ? "PRODUCT" : "DAMAGE")),
       };
       const { asNo } = await asCase.create(request, photos.map((photo) => photo.file));
@@ -245,7 +252,11 @@ export default function AS_ProductInfo() {
         navigate("/ai-estimate", { state: { asNo: failedAsNo } });
         return;
       }
-      setSubmitError(t(toErrorMessage(err, "접수에 실패했습니다. 잠시 후 다시 시도해 주세요.")));
+      setSubmitError(
+        err.code === "PHOTO_TYPE_REQUIRED"
+          ? t("전체 제품 사진과 손상 부위 사진을 각각 1장 이상 첨부해 주세요.")
+          : t(toErrorMessage(err, "접수에 실패했습니다. 잠시 후 다시 시도해 주세요.")),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -260,13 +271,15 @@ export default function AS_ProductInfo() {
         </BackLink>
 
         <TopRow>
-          <TopLeft>
-            <PageTitle>{t("제품 정보 입력")}</PageTitle>
+          <PageTitle>{t("제품 정보 입력")}</PageTitle>
+          <StepWrap>
             <StepIndicator current={1} />
-          </TopLeft>
-          <Button type="button" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? t("접수 중…") : t("예상 견적 확인하기")}
-          </Button>
+          </StepWrap>
+          <TopActions>
+            <Button type="button" onClick={handleSubmit} disabled={submitting}>
+              {submitting ? t("접수 중…") : t("예상 견적 확인하기")}
+            </Button>
+          </TopActions>
         </TopRow>
 
         <Columns>
@@ -324,8 +337,10 @@ export default function AS_ProductInfo() {
             <Card>
               <UploadHeader>{t("손상 사진 업로드")}</UploadHeader>
               <UploadBody>
-                <UploadNote>
-                  {t("전체 제품 사진 1장과 손상 부위 사진을 최소 1장 이상 첨부해 주세요.")}
+                <UploadNote $warn={photoWarning} role={photoWarning ? "alert" : undefined}>
+                  {t("제품 사진을 최소 1장, 최대 {max}장까지 첨부할 수 있습니다.", {
+                    max: MAX_PHOTOS,
+                  })}
                 </UploadNote>
 
                 <PhotoRow>
@@ -434,24 +449,37 @@ const BackArrow = styled.img`
   transform: rotate(90deg);
 `;
 
+/**
+ * 제목 · 단계 표시 · 액션 버튼.
+ * 양쪽 칸을 같은 1fr 로 두어, 제목과 버튼의 글자 수가 달라져도(언어 전환 포함)
+ * 가운데 단계 표시가 화면 중앙에 그대로 머문다.
+ */
 const TopRow = styled.div`
   width: 100%;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 24px;
   margin-bottom: 38px;
-`;
-
-const TopLeft = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 155px;
 
   @media (max-width: 1200px) {
-    gap: 32px;
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 20px;
+  }
+`;
+
+const StepWrap = styled.div`
+  display: flex;
+  justify-content: center;
+`;
+
+const TopActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+
+  @media (max-width: 1200px) {
+    justify-content: flex-start;
   }
 `;
 
@@ -666,7 +694,8 @@ const UploadNote = styled.p`
   margin: 0;
   font-size: 12px;
   line-height: 19.5px;
-  color: #6b6b65;
+  color: ${(props) => (props.$warn ? "#c0392b" : "#6b6b65")};
+  transition: color 0.2s ease;
 `;
 
 const PhotoRow = styled.div`

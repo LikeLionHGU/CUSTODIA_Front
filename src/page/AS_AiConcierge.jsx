@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import styled, { css } from "styled-components";
 import Button from "../components/Button";
@@ -24,6 +24,9 @@ export default function AS_AiConcierge() {
   const [sendError, setSendError] = useState(null);
   const [contactOpen, setContactOpen] = useState(false);
 
+  // 새 메시지가 붙으면 아래쪽으로 따라 내려간다 (메신저와 같은 방향)
+  const chatBoxRef = useRef(null);
+
   useEffect(() => {
     if (data?.answer) setMessages([{ role: "AI", content: data.answer }]);
   }, [data]);
@@ -36,6 +39,20 @@ export default function AS_AiConcierge() {
   ];
 
   const canSend = draft.trim() !== "" && !sending;
+
+  // scrollIntoView 의 smooth 는 렌더러가 프레임을 그려야 진행된다.
+  // 스크롤 위치를 직접 지정하면 그런 조건 없이 항상 끝으로 붙는다.
+  useEffect(() => {
+    const box = chatBoxRef.current;
+    if (box) box.scrollTop = box.scrollHeight;
+  }, [messages, sending]);
+
+  /** Enter 는 전송, Shift+Enter 는 줄바꿈. 한글 조합 중에는 보내지 않는다. */
+  const handleKeyDown = (e) => {
+    if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    if (canSend) handleSend();
+  };
 
   const handleSend = async () => {
     if (!canSend) return;
@@ -81,7 +98,7 @@ export default function AS_AiConcierge() {
             ))}
           </CaseStrip>
 
-          <ChatBox>
+          <ChatBox ref={chatBoxRef}>
             {loading && <StateText>{t("상담을 준비하는 중…")}</StateText>}
             {!loading && error && (
               <StateText>{t(toErrorMessage(error, "상담을 시작하지 못했습니다."))}</StateText>
@@ -108,8 +125,9 @@ export default function AS_AiConcierge() {
             <ComposerInput
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={t("궁금하신 내용을 입력해 주세요")}
-              rows={3}
+              onKeyDown={handleKeyDown}
+              placeholder={t("궁금하신 내용을 입력해 주세요 (Enter 로 전송, Shift+Enter 로 줄바꿈)")}
+              rows={2}
             />
             <ComposerFooter>
               <ComposerNote>
@@ -217,14 +235,25 @@ const CaseValue = styled.p`
   color: #222;
 `;
 
+/**
+ * 채팅 영역. 높이를 고정해 두고 안에서만 스크롤하므로 입력창 위치가 흔들리지 않는다.
+ * 메시지가 적을 때는 아래쪽에 붙도록 첫 자식에 margin-top: auto 를 준다.
+ */
 const ChatBox = styled.div`
   ${Panel}
+  height: clamp(360px, 52vh, 560px);
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding: 24px;
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  > *:first-child {
+    margin-top: auto;
+  }
 `;
+
 
 const StateText = styled.p`
   ${revealOnMount}
