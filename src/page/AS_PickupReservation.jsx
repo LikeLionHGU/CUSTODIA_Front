@@ -4,6 +4,7 @@ import * as pickup from "../api/pickup";
 import { useApiQuery } from "../api/useApiQuery";
 import { formatKoreanDate, toErrorMessage } from "../api/format";
 import calendarIcon from "../assets/icon_calendar.svg";
+import infoIcon from "../assets/icon_info.svg";
 import safetyDriverId from "../assets/safety_driver_id.jpg";
 import safetyPhotoRecord from "../assets/safety_photo_record.jpg";
 import safetySignature from "../assets/safety_signature.jpg";
@@ -30,10 +31,33 @@ function toDateKey(date) {
 
 // 안전 인계 안내 카드. 이미지는 Figma export 원본을 그대로 쓴다.
 const SAFETY_ITEMS = [
-  { label: "기사 신원 확인", image: safetyDriverId },
-  { label: "인계 전후 사진 기록", image: safetyPhotoRecord },
-  { label: "고객·기사 전자서명", image: safetySignature },
-  { label: "운송 보험 자동 적용", image: safetyInsurance },
+  {
+    label: "기사 신원 확인",
+    desc: "픽업 기사는 신원 확인된 MCM 케어 파트너 기사입니다.",
+    image: safetyDriverId,
+  },
+  {
+    label: "인계 전후 사진 기록",
+    desc: "인계 전후 제품 상태 사진과 전자서명이 접수 건에 자동으로 기록됩니다.",
+    image: safetyPhotoRecord,
+  },
+  {
+    label: "고객·기사 전자서명",
+    desc: "인계 완료 시 고객님과 기사 양측이 전자서명으로 인계를 확인합니다.",
+    image: safetySignature,
+  },
+  {
+    label: "운송 보험 자동 적용",
+    desc: "픽업부터 수선 센터 도착까지 전 구간 운송 보험이 자동 적용됩니다.",
+    image: safetyInsurance,
+  },
+];
+
+// 우측 다크 패널의 유의사항 목록
+const INSURANCE_NOTES = [
+  "픽업 시 운송 보험이 자동 적용되며, 수선센터 도착까지 제품을 보호합니다.",
+  "예약 확정 후 취소는 픽업 예정일 24시간 전까지 가능합니다.",
+  "최종 비용은 실물 진단 후 안내되며, 예상 견적은 참고용입니다.",
 ];
 
 function getTomorrow() {
@@ -149,18 +173,40 @@ const Card = styled.div`
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  align-items: flex-start;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius-card);
 `;
 
-const CardTitle = styled.p`
+const CardHeader = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 24px;
+`;
+
+const CardHeaderInner = styled.p`
+  width: 100%;
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
+  padding: 20px 0;
+  border-bottom: 1px solid #ededed;
+  box-sizing: border-box;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #222;
+`;
+
+const CardBody = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
 `;
 
 const CardText = styled.p`
@@ -169,48 +215,93 @@ const CardText = styled.p`
   color: #1f2937;
 `;
 
-const InfoRow = styled.div`
+const ReceiptRow = styled.div`
   width: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
 `;
 
-const InfoImage = styled.div`
-  flex: 1 0 0;
-  height: 72px;
-  min-width: 48px;
-  min-height: 48px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f9fafb;
-  border: 1px dashed #d1d5db;
-  border-radius: 6px;
-  font-size: 11px;
-  color: #9ca3af;
+/** 제품 사진 자리. 사진이 없어도 카드 높이가 흔들리지 않게 상자를 그대로 둔다. */
+const Thumb = styled.div`
+  flex-shrink: 0;
+  width: 140px;
+  height: 100px;
+  overflow: hidden;
+  background: #f2f2f0;
+  border-radius: var(--radius-card);
 `;
 
-const InfoTextGroup = styled.div`
-  flex: 1 0 0;
+const ThumbImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+`;
+
+const ReceiptTexts = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 `;
 
-const InfoText = styled.p`
+const ProductName = styled.p`
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  color: #222;
+`;
+
+const ReceiptMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const ReceiptNo = styled.p`
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 18px;
+`;
+
+const ReceiptNoLabel = styled.span`
+  color: #919191;
+`;
+
+const ReceiptNoValue = styled.span`
+  font-weight: 500;
+  color: #222;
+`;
+
+const StatusRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+`;
+
+/** 견적 안내가 끝난 상태에서만 들어오는 화면이라 디자인의 완료 색을 그대로 쓴다. */
+const StatusDot = styled.span`
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: #4b7c5a;
+`;
+
+const StatusText = styled.p`
   margin: 0;
   font-size: 12px;
-  color: #1f2937;
-`;
-
-const InfoSubText = styled.p`
-  margin: 0;
-  font-size: 11px;
-  color: #1f2937;
+  font-weight: 500;
+  line-height: 18px;
+  color: #4b7c5a;
 `;
 
 const FieldGroup = styled.div`
@@ -222,38 +313,73 @@ const FieldGroup = styled.div`
 `;
 
 const FieldLabel = styled.label`
-  font-size: 14px;
-  color: #1f2937;
+  font-size: 12px;
+  line-height: 12px;
+  color: #313131;
 `;
 
-const TextInput = styled.input`
+/** 픽업 날짜·시간대는 나란히 두고, 좁은 화면에서만 한 줄로 내린다. */
+const FieldGrid = styled.div`
   width: 100%;
-  height: 38px;
-  box-sizing: border-box;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background: #fff;
-  font-size: 14px;
-  color: #1f2937;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 
-  &::placeholder {
-    color: #9ca3af;
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
   }
 `;
 
-const TextArea = styled.textarea`
+const FieldHint = styled.p`
+  margin: 0;
+  font-size: 11px;
+  line-height: 17.875px;
+  color: #919191;
+`;
+
+/**
+ * 접수 화면(AS_ProductInfo)과 같은 컨트롤 스타일.
+ * 같은 플로우의 앞 단계와 높이·모서리·포커스 링이 어긋나지 않게 토큰을 공유한다.
+ */
+const fieldBox = `
   width: 100%;
-  height: 80px;
+  min-height: var(--control-height);
   box-sizing: border-box;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
+  padding: 11px 14px;
   background: #fff;
-  font-size: 14px;
-  color: #1f2937;
-  resize: vertical;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius-control);
+  font-size: 12px;
+  line-height: 20px;
+  color: #222;
   font-family: inherit;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &::placeholder {
+    color: #919191;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #919191;
+  }
+
+  &:focus {
+    border-color: #222;
+    box-shadow: 0 0 0 3px rgba(34, 34, 34, 0.08);
+  }
+`;
+
+const TextInput = styled.input`
+  ${fieldBox}
+  height: var(--control-height);
+`;
+
+const TextArea = styled.textarea`
+  ${fieldBox}
+  min-height: 112px;
+  resize: vertical;
 `;
 
 const SelectWrapper = styled.div`
@@ -262,33 +388,23 @@ const SelectWrapper = styled.div`
 `;
 
 const Select = styled.select`
-  width: 100%;
-  height: 38px;
-  box-sizing: border-box;
-  padding: 8px 32px 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background: #fff;
-  font-size: 14px;
-  color: ${(props) => (props.$hasValue ? "#1f2937" : "#9ca3af")};
+  ${fieldBox}
+  height: var(--control-height);
+  padding-right: 36px;
   appearance: none;
+  color: ${(props) => (props.$hasValue ? "#222" : "#919191")};
 `;
 
 const SelectBox = styled.button`
-  width: 100%;
-  height: 38px;
-  box-sizing: border-box;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background: #fff;
-  font-size: 14px;
-  text-align: left;
-  color: ${(props) => (props.$hasValue ? "#1f2937" : "#9ca3af")};
+  ${fieldBox}
+  height: var(--control-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  text-align: left;
   cursor: pointer;
+  color: ${(props) => (props.$hasValue ? "#222" : "#919191")};
 `;
 
 const CalendarIcon = styled.img`
@@ -397,44 +513,131 @@ const SafetyGrid = styled.div`
 `;
 
 const SafetyItem = styled.div`
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   align-items: flex-start;
+  overflow: hidden;
+  border: 1px solid #e8e8e4;
+  border-radius: var(--radius-card);
 `;
 
 const SafetyImage = styled.img`
   width: 100%;
-  height: 96px;
+  height: 110px;
   object-fit: cover;
   display: block;
-  border-radius: 6px;
-  background: #f0f0f0;
+  background: #f2f2f0;
+`;
+
+const SafetyTexts = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 12px 12px;
 `;
 
 const SafetyLabel = styled.p`
   margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  color: #222;
+`;
+
+const SafetyDesc = styled.p`
+  margin: 0;
   font-size: 11px;
-  color: #1f2937;
+  line-height: 17.875px;
+  color: #919191;
+`;
+
+const SummaryBody = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
 `;
 
 const SummaryRow = styled.div`
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  color: #1f2937;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: ${(props) => (props.$last ? "none" : "1px solid #ededed")};
 `;
 
 const SummaryLabel = styled.span`
-  color: #1f2937;
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 16.5px;
+  color: #919191;
 `;
 
 const SummaryValue = styled.span`
-  color: #1f2937;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
   text-align: right;
+  word-break: break-word;
+  color: ${(props) => (props.$muted ? "#919191" : "#222")};
+`;
+
+/**
+ * 운송 보험 및 유의사항 — 접수 화면의 다크 안내 패널과 같은 형태.
+ * 카드가 아니라 패널이라 헤더 구분선 없이 아이콘 + 목록으로만 구성한다.
+ */
+const InfoPanel = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 24px;
+  background: #313131;
+  border-radius: var(--radius-card);
+`;
+
+const InfoIcon = styled.img`
+  flex-shrink: 0;
+  width: 15.833px;
+  height: 15.833px;
+`;
+
+const InfoBody = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+`;
+
+const InfoTitle = styled.p`
+  margin: 0;
+  font-size: 12px;
+  line-height: 12px;
+  color: #fff;
+`;
+
+const InfoList = styled.ul`
+  margin: 0;
+  padding: 12px 0 0 16.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const InfoListItem = styled.li`
+  font-size: 11px;
+  line-height: 17.875px;
+  color: rgba(255, 255, 255, 0.5);
+  list-style: disc;
 `;
 
 const Button = styled.button`
@@ -488,6 +691,8 @@ export default function AS_PickupReservation() {
     productName: form?.modelName ?? "—",
     receiptNumber: form?.asNo ?? asNo ?? "—",
     status: form?.statusLabel ?? "—",
+    // 명세 4-1 의 photoUrl — 접수 시 올린 제품 사진
+    photoUrl: form?.photoUrl,
   };
 
   const minSelectableDate = useMemo(() => getTomorrow(), []);
@@ -600,24 +805,39 @@ export default function AS_PickupReservation() {
           <Columns>
             <LeftColumn>
               <Card>
-                <CardTitle>{t("접수 건 정보")}</CardTitle>
-                <InfoRow>
-                  <InfoImage>Image</InfoImage>
-                  <InfoTextGroup>
-                    <InfoText>{receiptInfo.productName}</InfoText>
-                    <InfoSubText>
-                      {t("AS 접수번호: {no}", { no: receiptInfo.receiptNumber })}
-                    </InfoSubText>
-                    <InfoSubText>
-                      {t("접수 상태: {status}", { status: t(receiptInfo.status) })}
-                    </InfoSubText>
-                  </InfoTextGroup>
-                </InfoRow>
+                <CardHeader>
+                  <CardHeaderInner>{t("접수 건 정보")}</CardHeaderInner>
+                </CardHeader>
+                <CardBody>
+                  <ReceiptRow>
+                    <Thumb>
+                      {receiptInfo.photoUrl && (
+                        <ThumbImage src={receiptInfo.photoUrl} alt={t("제품 사진")} />
+                      )}
+                    </Thumb>
+                    <ReceiptTexts>
+                      <ProductName>{receiptInfo.productName}</ProductName>
+                      <ReceiptMeta>
+                        <ReceiptNo>
+                          <ReceiptNoLabel>{t("AS 접수번호:")}</ReceiptNoLabel>
+                          <ReceiptNoValue>{receiptInfo.receiptNumber}</ReceiptNoValue>
+                        </ReceiptNo>
+                        <StatusRow>
+                          <StatusDot />
+                          <StatusText>{t(receiptInfo.status)}</StatusText>
+                        </StatusRow>
+                      </ReceiptMeta>
+                    </ReceiptTexts>
+                  </ReceiptRow>
+                </CardBody>
               </Card>
 
               <Card>
-                <CardTitle>{t("픽업 일시 선택")}</CardTitle>
-
+                <CardHeader>
+                  <CardHeaderInner>{t("픽업 일시 선택")}</CardHeaderInner>
+                </CardHeader>
+                <CardBody>
+                <FieldGrid>
                 <FieldGroup ref={dateFieldRef}>
                   <FieldLabel>{t("픽업 날짜")}</FieldLabel>
                   <SelectBox
@@ -698,6 +918,7 @@ export default function AS_PickupReservation() {
                     <ChevronIcon wrapper={SelectChevronWrap} />
                   </SelectWrapper>
                 </FieldGroup>
+                </FieldGrid>
 
                 <FieldGroup>
                   <FieldLabel>{t("전화번호")}</FieldLabel>
@@ -705,91 +926,117 @@ export default function AS_PickupReservation() {
                     type="tel"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    placeholder={t("숫자만 입력해 주세요")}
+                    placeholder={t("010-0000-0000")}
                     value={phone}
                     onChange={handlePhoneChange}
                   />
+                  <FieldHint>{t("기사님이 해당 전화번호로 연락을 드릴 예정입니다.")}</FieldHint>
                 </FieldGroup>
-                <InfoSubText>{t("기사님이 해당 전화번호로 연락을 드릴 예정입니다.")}</InfoSubText>
+                </CardBody>
               </Card>
 
               <Card>
-                <CardTitle>{t("수거 장소")}</CardTitle>
-                <FieldGroup>
-                  <FieldLabel>{t("주소")}</FieldLabel>
-                  <TextInput type="text" value={address} onChange={(e) => setAddress(e.target.value)} />
-                </FieldGroup>
-                <FieldGroup>
-                  <FieldLabel>{t("상세 주소 (동·호수 등)")}</FieldLabel>
-                  <TextInput
-                    type="text"
-                    value={addressDetail}
-                    onChange={(e) => setAddressDetail(e.target.value)}
-                  />
-                </FieldGroup>
-                <FieldGroup>
-                  <FieldLabel>{t("수거 시 전달 사항")}</FieldLabel>
-                  <TextArea value={note} onChange={(e) => setNote(e.target.value)} />
-                </FieldGroup>
+                <CardHeader>
+                  <CardHeaderInner>{t("수거 장소")}</CardHeaderInner>
+                </CardHeader>
+                <CardBody>
+                  <FieldGroup>
+                    <FieldLabel>{t("주소")}</FieldLabel>
+                    <TextInput
+                      type="text"
+                      placeholder={t("도로명 주소 검색")}
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                    />
+                  </FieldGroup>
+                  <FieldGroup>
+                    <FieldLabel>{t("상세 주소 (동·호수 등)")}</FieldLabel>
+                    <TextInput
+                      type="text"
+                      placeholder={t("상세 주소 입력")}
+                      value={addressDetail}
+                      onChange={(e) => setAddressDetail(e.target.value)}
+                    />
+                  </FieldGroup>
+                  <FieldGroup>
+                    <FieldLabel>{t("수거 시 전달 사항")}</FieldLabel>
+                    <TextArea
+                      placeholder={t("예: 경비실 맡겨 주세요 / 도착 전 문자 주세요")}
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                    />
+                  </FieldGroup>
+                </CardBody>
               </Card>
 
               <Card>
-                <CardTitle>{t("안전 인계 안내")}</CardTitle>
-                <SafetyGrid>
-                  {SAFETY_ITEMS.map((item) => (
-                    <SafetyItem key={item.label}>
-                      <SafetyImage src={item.image} alt="" />
-                      <SafetyLabel>{t(item.label)}</SafetyLabel>
-                    </SafetyItem>
-                  ))}
-                </SafetyGrid>
-                <InfoSubText>
-                  {t(
-                    "픽업 기사는 신원 확인된 MCM 케어 파트너 기사입니다. 인계 전후 제품 상태 사진과 전자서명이 접수 건에 자동으로 기록됩니다.",
-                  )}
-                </InfoSubText>
+                <CardHeader>
+                  <CardHeaderInner>{t("안전 인계 안내")}</CardHeaderInner>
+                </CardHeader>
+                <CardBody>
+                  <SafetyGrid>
+                    {SAFETY_ITEMS.map((item) => (
+                      <SafetyItem key={item.label}>
+                        <SafetyImage src={item.image} alt="" />
+                        <SafetyTexts>
+                          <SafetyLabel>{t(item.label)}</SafetyLabel>
+                          <SafetyDesc>{t(item.desc)}</SafetyDesc>
+                        </SafetyTexts>
+                      </SafetyItem>
+                    ))}
+                  </SafetyGrid>
+                </CardBody>
               </Card>
             </LeftColumn>
 
             <RightColumn>
               <Card>
-                <CardTitle>{t("예약 정보 확인")}</CardTitle>
-                <SummaryRow>
-                  <SummaryLabel>{t("접수 번호")}</SummaryLabel>
-                  <SummaryValue>{receiptInfo.receiptNumber}</SummaryValue>
-                </SummaryRow>
-                <SummaryRow>
-                  <SummaryLabel>{t("제품명")}</SummaryLabel>
-                  <SummaryValue>{receiptInfo.productName}</SummaryValue>
-                </SummaryRow>
-                <SummaryRow>
-                  <SummaryLabel>{t("픽업 날짜")}</SummaryLabel>
-                  <SummaryValue>{pickupDate ? formatDateKorean(pickupDate, t) : "-"}</SummaryValue>
-                </SummaryRow>
-                <SummaryRow>
-                  <SummaryLabel>{t("픽업 시간대")}</SummaryLabel>
-                  <SummaryValue>
-                    {selectedTimeSlot
-                      ? `${selectedTimeSlot.slotStart} – ${selectedTimeSlot.slotEnd}`
-                      : "-"}
-                  </SummaryValue>
-                </SummaryRow>
-                <SummaryRow>
-                  <SummaryLabel>{t("수거 주소")}</SummaryLabel>
-                  <SummaryValue>{address.trim() ? address : "-"}</SummaryValue>
-                </SummaryRow>
+                <CardHeader>
+                  <CardHeaderInner>{t("예약 정보 확인")}</CardHeaderInner>
+                </CardHeader>
+                <SummaryBody>
+                  <SummaryRow>
+                    <SummaryLabel>{t("접수 번호")}</SummaryLabel>
+                    <SummaryValue>{receiptInfo.receiptNumber}</SummaryValue>
+                  </SummaryRow>
+                  <SummaryRow>
+                    <SummaryLabel>{t("제품명")}</SummaryLabel>
+                    <SummaryValue>{receiptInfo.productName}</SummaryValue>
+                  </SummaryRow>
+                  <SummaryRow>
+                    <SummaryLabel>{t("픽업 날짜")}</SummaryLabel>
+                    <SummaryValue $muted={!pickupDate}>
+                      {pickupDate ? formatDateKorean(pickupDate, t) : "—"}
+                    </SummaryValue>
+                  </SummaryRow>
+                  <SummaryRow>
+                    <SummaryLabel>{t("픽업 시간대")}</SummaryLabel>
+                    <SummaryValue $muted={!selectedTimeSlot}>
+                      {selectedTimeSlot
+                        ? `${selectedTimeSlot.slotStart} – ${selectedTimeSlot.slotEnd}`
+                        : "—"}
+                    </SummaryValue>
+                  </SummaryRow>
+                  <SummaryRow $last>
+                    <SummaryLabel>{t("수거 주소")}</SummaryLabel>
+                    <SummaryValue $muted={!address.trim()}>
+                      {address.trim() ? address : "—"}
+                    </SummaryValue>
+                  </SummaryRow>
+                </SummaryBody>
               </Card>
 
-              <Card>
-                <CardTitle>{t("운송 보험 및 유의사항")}</CardTitle>
-                <CardText>
-                  {t(
-                    "본 픽업 서비스에는 운송 보험이 자동 적용됩니다. 인계 시점부터 MCM 케어 수선센터 도착까지 제품이 보호됩니다.",
-                  )}
-                </CardText>
-                <CardText>{t("예약 확정 후 취소는 픽업 예정일 24시간 전까지 가능합니다.")}</CardText>
-                <CardText>{t("최종 수선 비용은 실물 진단 후 별도 안내됩니다. 예상 견적은 참고용입니다.")}</CardText>
-              </Card>
+              <InfoPanel>
+                <InfoIcon src={infoIcon} alt="" />
+                <InfoBody>
+                  <InfoTitle>{t("운송 보험 및 유의사항")}</InfoTitle>
+                  <InfoList>
+                    {INSURANCE_NOTES.map((note) => (
+                      <InfoListItem key={note}>{t(note)}</InfoListItem>
+                    ))}
+                  </InfoList>
+                </InfoBody>
+              </InfoPanel>
 
               {(submitError || formError) && (
                 <CardText role="alert" style={{ color: "#c0392b" }}>
