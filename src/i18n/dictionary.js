@@ -341,6 +341,14 @@ export const DICTIONARY = {
 
   // 리페어 패스포트 상세
   "리페어 패스포트 상세": "Repair Passport details",
+  "A/S 조회 상세": "Repair details",
+  "해당 제품 AI 견적 다시보기": "View the AI estimate again",
+  "해당 A/S 건에 대해 궁금한 점이 있으신가요?": "Have a question about this request?",
+  "해당 A/S 건 상담하기": "Get help with this request",
+  "진행중": "In progress",
+  "예정": "Scheduled",
+  "현재": "now",
+  "표시할 이력이 없습니다.": "There is no history to show yet.",
   "AS 번호 · 제품명 · 현재 상태를 확인하세요": "Check the request number, product and current status",
   "AS 건 목록으로": "Back to the list",
   "이 AS 건 상담하기": "Get help with this request",
@@ -818,6 +826,14 @@ export const DICTIONARY = {
 
   // 리페어 패스포트 상세
   "리페어 패스포트 상세": "Reparaturpass – Details",
+  "A/S 조회 상세": "Reparaturdetails",
+  "해당 제품 AI 견적 다시보기": "KI-Kostenschätzung erneut ansehen",
+  "해당 A/S 건에 대해 궁금한 점이 있으신가요?": "Haben Sie Fragen zu diesem Auftrag?",
+  "해당 A/S 건 상담하기": "Zu diesem Auftrag beraten lassen",
+  "진행중": "Läuft",
+  "예정": "Geplant",
+  "현재": "jetzt",
+  "표시할 이력이 없습니다.": "Noch kein Verlauf vorhanden.",
   "AS 번호 · 제품명 · 현재 상태를 확인하세요": "Auftragsnummer, Produkt und aktuellen Status prüfen",
   "AS 건 목록으로": "Zurück zur Übersicht",
   "이 AS 건 상담하기": "Zu diesem Auftrag beraten lassen",

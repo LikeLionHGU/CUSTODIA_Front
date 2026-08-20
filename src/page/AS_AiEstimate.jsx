@@ -33,6 +33,12 @@ export default function AS_AiEstimate() {
   // 715에서 POST /asCase 로 접수한 뒤 asNo 를 들고 넘어온다 (명세 3-2)
   const asNo = location.state?.asNo;
 
+  /**
+   * 조회에서 들어온 "다시보기" 인지 접수 흐름의 2단계인지 구분한다.
+   * 다시보기는 이미 접수가 끝난 건이라 단계 표시와 픽업 예약 버튼이 필요 없다.
+   */
+  const review = !!location.state?.review;
+
   const { data, loading, error, reload } = useApiQuery(
     () => (asNo ? asCase.getEstimate(asNo) : Promise.reject(new Error("접수 번호가 없습니다."))),
     [asNo],
@@ -116,21 +122,28 @@ export default function AS_AiEstimate() {
   return (
     <Page>
       <Body>
-        <BackLink type="button" onClick={() => navigate("/product-info")}>
+        <BackLink
+          type="button"
+          onClick={() => navigate(review ? -1 : "/product-info")}
+        >
           <BackArrow src={backArrow} alt="" />
-          {t("제품 정보 입력으로")}
+          {review ? t("A/S 조회 상세") : t("제품 정보 입력으로")}
         </BackLink>
 
-        <TopRow>
-          <PageTitle>{t("AI 예상 견적 결과")}</PageTitle>
-          <StepWrap>
-            <StepIndicator current={2} />
-          </StepWrap>
-          <TopActions>
-            <Button type="button" onClick={handlePickupReservation} disabled={!data}>
-              {t("AS 접수 시작하기")}
-            </Button>
-          </TopActions>
+        <TopRow $review={review}>
+          <PageTitle>{review ? t("AI 예상 견적") : t("AI 예상 견적 결과")}</PageTitle>
+          {!review && (
+            <>
+              <StepWrap>
+                <StepIndicator current={2} />
+              </StepWrap>
+              <TopActions>
+                <Button type="button" onClick={handlePickupReservation} disabled={!data}>
+                  {t("AS 접수 시작하기")}
+                </Button>
+              </TopActions>
+            </>
+          )}
         </TopRow>
 
         {loading && <StateBanner>{t("견적을 불러오는 중…")}</StateBanner>}
@@ -349,7 +362,7 @@ const BackArrow = styled.img`
 const TopRow = styled.div`
   width: 100%;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: ${(props) => (props.$review ? "1fr" : "1fr auto 1fr")};
   align-items: center;
   gap: 24px;
   margin-bottom: 32px;

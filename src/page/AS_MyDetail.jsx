@@ -1,319 +1,18 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
+
+import Button from "../components/Button";
+import StatusLabel from "../components/StatusLabel";
 import * as asCaseApi from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
-import { formatKoreanDate, formatKoreanDateTime, toErrorMessage } from "../api/format";
-import { useT } from "../i18n";
+import { formatDotDate, formatKoreanDate, toErrorMessage } from "../api/format";
 import { reveal } from "../css/motion";
+import { useT } from "../i18n";
 
 const LOCATION_NOTICE = {
   title: "정보 미확정 안내",
   body: "수선 업체 내부 일정에 따라 세부 위치 정보가 일부 제공되지 않을 수 있습니다. 갱신 시 즉시 반영됩니다.",
 };
-
-/** 명세 3-6: completed 여부로 아이콘과 문구를 나눈다 */
-function timelineIcon(step, isCurrent) {
-  if (!step.completed) return "○";
-  return isCurrent ? "→" : "✓";
-}
-
-function timelineDesc(step, t) {
-  if (!step.completed) return t("예정 · {description}", { description: t(step.description) });
-  return [formatKoreanDate(step.occurredAt), t(step.description)].filter(Boolean).join(" · ");
-}
-
-const Page = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  box-sizing: border-box;
-  text-align: left;
-`;
-
-const BodyRow = styled.div`
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-`;
-
-const Body = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 24px;
-  box-sizing: border-box;
-`;
-
-const TitleRow = styled.div`
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-`;
-
-const TitleCol = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-`;
-
-const SectionTitle = styled.p`
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #1f2937;
-`;
-
-const SectionSubTitle = styled.p`
-  margin: 0;
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const Spacer = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
-  height: 1px;
-`;
-
-const LinkButton = styled.button`
-  border: none;
-  background: none;
-  padding: 0;
-  font-size: 14px;
-  color: #6b7280;
-  text-decoration: underline;
-  cursor: pointer;
-`;
-
-const PrimaryButton = styled.button`
-  min-width: 60px;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  background: #1f2937;
-  color: #fff;
-`;
-
-const StateText = styled.p`
-  width: 100%;
-  margin: 0;
-  font-size: 12px;
-  color: #6b7280;
-`;
-
-const Columns = styled.div`
-  ${reveal}
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 24px;
-`;
-
-const LeftColumn = styled.div`
-  width: 400px;
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-`;
-
-const RightColumn = styled.div`
-  flex: 1 0 260px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-`;
-
-const Card = styled.div`
-  width: 100%;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-`;
-
-const CardTitle = styled.p`
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
-`;
-
-const InfoRows = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const InfoRow = styled.div`
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-`;
-
-const InfoLabel = styled.span`
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const InfoValue = styled.span`
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const Chip = styled.span`
-  min-width: 40px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 500;
-  box-sizing: border-box;
-  background: #f3f4f6;
-  color: #1f2937;
-  border: 1px solid #e5e7eb;
-`;
-
-const ProgressTrack = styled.div`
-  width: 100%;
-  height: 8px;
-  border-radius: 4px;
-  background: #e5e7eb;
-  overflow: hidden;
-`;
-
-const ProgressFill = styled.div`
-  height: 100%;
-  border-radius: 4px;
-  background: #1f2937;
-  width: ${(props) => props.$percent}%;
-`;
-
-const MessageCol = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
-
-const NoticeCard = styled.div`
-  width: 100%;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-`;
-
-const NoticeTitle = styled.p`
-  margin: 0;
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const NoticeBody = styled.p`
-  margin: 0;
-  font-size: 11px;
-  color: #1f2937;
-`;
-
-const NoticeBodySmall = styled.p`
-  margin: 0;
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const TimelineList = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-`;
-
-const TimelineRow = styled.div`
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  /* 명세 3-6: 미완료 단계는 흐리게 표시한다 */
-  opacity: ${(props) => (props.$dimmed ? 0.45 : 1)};
-`;
-
-const TimelineIcon = styled.div`
-  width: 16px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const TimelineInfo = styled.div`
-  flex: 1 0 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
-
-const TimelineTitle = styled.p`
-  margin: 0;
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const TimelineDesc = styled.p`
-  margin: 0;
-  font-size: 11px;
-  color: #1f2937;
-`;
-
-const ConsultBody = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const ConsultText = styled.p`
-  margin: 0;
-  font-size: 12px;
-  color: #1f2937;
-`;
-
-const ConsultButtonRow = styled.div`
-  width: 100%;
-  display: flex;
-  justify-content: flex-end;
-`;
 
 export default function AS_MyDetail() {
   const t = useT();
@@ -330,12 +29,15 @@ export default function AS_MyDetail() {
   const historyList = data?.historyList ?? [];
   // 완료된 단계 중 마지막이 현재 단계다
   const currentIndex = historyList.reduce((last, step, i) => (step.completed ? i : last), -1);
-  const progress = historyList.length
-    ? Math.round(((currentIndex + 1) / historyList.length) * 100)
-    : 0;
 
-  const handleGoToList = () => {
-    navigate("/my-as-list");
+  // 접수 시 올린 제품 사진. 응답 필드 이름이 화면마다 달라 둘 다 받아 둔다.
+  const photoUrl = data?.photoUrl ?? data?.thumbnailUrl;
+
+  const handleGoToList = () => navigate("/my-as-list");
+
+  /** 이 접수 건의 AI 견적을 다시 본다 — 접수 흐름이 아니라 조회이므로 review 로 표시한다. */
+  const handleReviewEstimate = () => {
+    navigate("/ai-estimate", { state: { asNo: data?.asNo ?? asNo, review: true } });
   };
 
   // 명세 3-6: 이 버튼은 POST /api/chat 에 asNo 를 담아 호출한다
@@ -351,158 +53,553 @@ export default function AS_MyDetail() {
 
   return (
     <Page>
-      <BodyRow>
-        <Body>
-          <TitleRow>
-            <TitleCol>
-              <SectionTitle>{t("리페어 패스포트 상세")}</SectionTitle>
-              <SectionSubTitle>{t("AS 번호 · 제품명 · 현재 상태를 확인하세요")}</SectionSubTitle>
-            </TitleCol>
-            <Spacer />
-            <LinkButton type="button" onClick={handleGoToList}>
-              {t("AS 건 목록으로")}
-            </LinkButton>
-            <PrimaryButton type="button" onClick={handleConsult}>
-              {t("이 AS 건 상담하기")}
-            </PrimaryButton>
-          </TitleRow>
+      <Body>
+        <BackLink type="button" onClick={handleGoToList}>
+          {t("A/S 조회")}
+        </BackLink>
 
-          {loading && <StateText>{t("불러오는 중…")}</StateText>}
-          {!loading && error && <StateText>{t(toErrorMessage(error))}</StateText>}
+        <TopRow>
+          <PageTitle>{t("A/S 조회 상세")}</PageTitle>
+          <Button type="button" onClick={handleReviewEstimate} disabled={!data}>
+            {t("해당 제품 AI 견적 다시보기")}
+          </Button>
+        </TopRow>
 
-          <Columns $pending={loading}>
-            <LeftColumn>
+        {loading && <StateText>{t("불러오는 중…")}</StateText>}
+        {!loading && error && <StateText role="alert">{t(toErrorMessage(error))}</StateText>}
+
+        <Columns $pending={loading}>
+          {/* 왼쪽 묶음 — 식별 정보 + 일정·위치, 그 아래 상담 배너 */}
+          <MainGroup>
+            <Cards>
               <Card>
-                <CardTitle>{t("접수 건 식별 정보")}</CardTitle>
-                <InfoRows>
-                  <InfoRow>
-                    <InfoLabel>{t("AS 번호")}</InfoLabel>
-                    <Spacer />
-                    <InfoValue>{data?.asNo ?? asNo ?? "—"}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel>{t("제품명")}</InfoLabel>
-                    <Spacer />
-                    <InfoValue>{data?.modelName ?? "—"}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel>{t("접수일")}</InfoLabel>
-                    <Spacer />
-                    <InfoValue>{data?.createdAt ? formatKoreanDate(data.createdAt) : "—"}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel>{t("접수 유형")}</InfoLabel>
-                    <Spacer />
-                    <InfoValue>{t(data?.intakeType) ?? "—"}</InfoValue>
-                  </InfoRow>
-                </InfoRows>
+                <CardHeader>
+                  <CardHeaderInner>{t("접수 건 식별 정보")}</CardHeaderInner>
+                </CardHeader>
+                <Photo>{photoUrl && <PhotoImg src={photoUrl} alt={t("제품 사진")} />}</Photo>
+                <CardBody>
+                  <Row>
+                    <Key>{t("AS 번호")}</Key>
+                    <Val>{data?.asNo ?? asNo ?? "—"}</Val>
+                  </Row>
+                  <Row>
+                    <Key>{t("제품명")}</Key>
+                    <Val>{data?.modelName ?? "—"}</Val>
+                  </Row>
+                  <Row>
+                    <Key>{t("접수일")}</Key>
+                    <Val>{data?.createdAt ? formatKoreanDate(data.createdAt) : "—"}</Val>
+                  </Row>
+                  <Row>
+                    <Key>{t("접수 유형")}</Key>
+                    <Val>{t(data?.intakeType) ?? "—"}</Val>
+                  </Row>
+                  <Row $last>
+                    <Key>{t("현재 단계")}</Key>
+                    {/* 상태 색은 StatusLabel 이 정한다 — 목록·홈과 같은 색을 쓰게 된다 */}
+                    <StatusLabel status={data?.status} label={data?.statusLabel} />
+                  </Row>
+                </CardBody>
               </Card>
 
-              <Card>
-                <CardTitle>{t("현재 처리 단계")}</CardTitle>
-                <InfoRows>
-                  <InfoRow>
-                    <InfoLabel>{t("현재 단계")}</InfoLabel>
-                    <Spacer />
-                    <Chip>{t(data?.statusLabel) ?? "—"}</Chip>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel>{t("최신 상태 업데이트")}</InfoLabel>
-                    <Spacer />
-                    <InfoValue>{data?.statusUpdatedAt ? formatKoreanDateTime(data.statusUpdatedAt) : "—"}</InfoValue>
-                  </InfoRow>
-                  <ProgressTrack>
-                    <ProgressFill $percent={progress} />
-                  </ProgressTrack>
-                </InfoRows>
-                <MessageCol>
-                  <InfoLabel>{t("최신 상태 메시지")}</InfoLabel>
-                  <NoticeBodySmall>{t(data?.statusMessage) ?? "—"}</NoticeBodySmall>
-                </MessageCol>
-              </Card>
+              <SideStack>
+                <Card>
+                  <CardHeader>
+                    <CardHeaderInner>{t("예상 완료일")}</CardHeaderInner>
+                  </CardHeader>
+                  <CardBody>
+                    <Row>
+                      <Key>{t("예상 완료일")}</Key>
+                      <Val>
+                        {data?.expectedCompletedAt ? formatKoreanDate(data.expectedCompletedAt) : "—"}
+                      </Val>
+                    </Row>
+                    <Row $last>
+                      <Key>{t("최종 갱신")}</Key>
+                      <Val>
+                        {data?.expectedUpdatedAt ? formatKoreanDate(data.expectedUpdatedAt) : "—"}
+                      </Val>
+                    </Row>
+                  </CardBody>
+                </Card>
 
-              <Card>
-                <CardTitle>{t("예상 완료일")}</CardTitle>
-                <InfoRows>
-                  <InfoRow>
-                    <InfoLabel>{t("예상 완료일")}</InfoLabel>
-                    <Spacer />
-                    <InfoValue>{data?.expectedCompletedAt ? formatKoreanDate(data.expectedCompletedAt) : "—"}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel>{t("최종 갱신")}</InfoLabel>
-                    <Spacer />
-                    <InfoValue>{data?.expectedUpdatedAt ? formatKoreanDate(data.expectedUpdatedAt) : "—"}</InfoValue>
-                  </InfoRow>
-                  <NoticeCard>
-                    <NoticeTitle>{t("일정 변동 안내")}</NoticeTitle>
-                    <NoticeBody>{t(data?.delayReason ?? "현재 안내된 일정 변동 사항이 없습니다.")}</NoticeBody>
-                  </NoticeCard>
-                </InfoRows>
-              </Card>
+                <Card>
+                  <CardHeader>
+                    <CardHeaderInner>{t("위치 및 현황")}</CardHeaderInner>
+                  </CardHeader>
+                  <CardBody>
+                    <Row>
+                      <Key>{t("현재 위치")}</Key>
+                      <Val>{t(data?.currentLocation) ?? "—"}</Val>
+                    </Row>
+                    <Row>
+                      <Key>{t("위치 상태")}</Key>
+                      <Val>{t(data?.locationStatus) ?? "—"}</Val>
+                    </Row>
+                    <NoticeBox>
+                      <NoticeTitle>{t(LOCATION_NOTICE.title)}</NoticeTitle>
+                      <NoticeBody>{t(data?.delayReason ?? LOCATION_NOTICE.body)}</NoticeBody>
+                    </NoticeBox>
+                  </CardBody>
+                </Card>
+              </SideStack>
+            </Cards>
 
-              <Card>
-                <CardTitle>{t("위치 및 현황")}</CardTitle>
-                <InfoRows>
-                  <InfoRow>
-                    <InfoLabel>{t("현재 위치")}</InfoLabel>
-                    <Spacer />
-                    <InfoValue>{t(data?.currentLocation) ?? "—"}</InfoValue>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel>{t("위치 유형")}</InfoLabel>
-                    <Spacer />
-                    <Chip>{t(data?.locationType) ?? "—"}</Chip>
-                  </InfoRow>
-                  <InfoRow>
-                    <InfoLabel>{t("위치 상태")}</InfoLabel>
-                    <Spacer />
-                    <InfoValue>{t(data?.locationStatus) ?? "—"}</InfoValue>
-                  </InfoRow>
-                </InfoRows>
-                <MessageCol>
-                  <InfoLabel>{t(LOCATION_NOTICE.title)}</InfoLabel>
-                  <NoticeBody>{t(LOCATION_NOTICE.body)}</NoticeBody>
-                </MessageCol>
-              </Card>
-            </LeftColumn>
+            <ConsultBanner>
+              <ConsultTexts>
+                <ConsultTitle>{t("해당 A/S 건에 대해 궁금한 점이 있으신가요?")}</ConsultTitle>
+                <ConsultDesc>
+                  {t(
+                    "AI 컨시어지 또는 상담원이 접수 이력과 수선 진행 기록을 공유하여 반복 설명 없이 문의를 이어갑니다.",
+                  )}
+                </ConsultDesc>
+              </ConsultTexts>
+              <ConsultButton type="button" onClick={handleConsult}>
+                {t("해당 A/S 건 상담하기")}
+              </ConsultButton>
+            </ConsultBanner>
+          </MainGroup>
 
-            <RightColumn>
-              <Card>
-                <CardTitle>{t("수선 진행 이력")}</CardTitle>
-                <TimelineList>
-                  {historyList.map((step, index) => (
-                    <TimelineRow key={step.status} $dimmed={!step.completed}>
-                      <TimelineIcon>{timelineIcon(step, index === currentIndex)}</TimelineIcon>
-                      <TimelineInfo>
-                        <TimelineTitle>{t(step.statusLabel)}</TimelineTitle>
-                        <TimelineDesc>{timelineDesc(step, t)}</TimelineDesc>
-                      </TimelineInfo>
-                    </TimelineRow>
-                  ))}
-                </TimelineList>
-              </Card>
-
-              <Card>
-                <CardTitle>{t("상담 연결 안내")}</CardTitle>
-                <ConsultBody>
-                  <ConsultText>{t("이 AS 건에 대해 궁금한 점이 있으신가요?")}</ConsultText>
-                  <ConsultText>
-                    {t(
-                      "AI 컨시어지 또는 상담원이 접수 이력과 수선 진행 기록을 공유하여 반복 설명 없이 문의를 이어갑니다.",
-                    )}
-                  </ConsultText>
-                  <ConsultButtonRow>
-                    <PrimaryButton type="button" onClick={handleConsult}>
-                      {t("이 AS 건 상담하기")}
-                    </PrimaryButton>
-                  </ConsultButtonRow>
-                </ConsultBody>
-              </Card>
-            </RightColumn>
-          </Columns>
-        </Body>
-      </BodyRow>
+          {/* 오른쪽 — 수선 진행 이력 */}
+          <Card>
+            <CardHeader>
+              <CardHeaderInner>{t("수선 진행 이력")}</CardHeaderInner>
+            </CardHeader>
+            <TimelineBody>
+              {historyList.length === 0 && <Key>{t("표시할 이력이 없습니다.")}</Key>}
+              {historyList.map((step, index) => {
+                const state =
+                  index === currentIndex ? "now" : step.completed ? "done" : "next";
+                return (
+                  <Entry key={step.status ?? index}>
+                    <Rail>
+                      <Dot $state={state} />
+                      {index < historyList.length - 1 && <Line />}
+                    </Rail>
+                    <EntryBody>
+                      <EntryHead>
+                        <EntryTitle $state={state}>{t(step.statusLabel)}</EntryTitle>
+                        {state === "now" && <NowBadge>{t("진행중")}</NowBadge>}
+                        {state === "next" && <NextBadge>{t("예정")}</NextBadge>}
+                      </EntryHead>
+                      <EntryDate $state={state}>
+                        {step.occurredAt ? formatDotDate(step.occurredAt) : "—"}
+                        {state === "now" && ` ~ ${t("현재")}`}
+                      </EntryDate>
+                      {step.description && (
+                        <EntryDesc $state={state}>{t(step.description)}</EntryDesc>
+                      )}
+                    </EntryBody>
+                  </Entry>
+                );
+              })}
+            </TimelineBody>
+          </Card>
+        </Columns>
+      </Body>
     </Page>
   );
 }
+
+/* ─────────────────────────────────────────────
+   Styled Components – Figma node-id=616-13032 기준
+   ───────────────────────────────────────────── */
+
+const Page = styled.div`
+  width: 100%;
+  min-height: 100%;
+  background: #f9f9f9;
+  box-sizing: border-box;
+  text-align: left;
+`;
+
+const Body = styled.div`
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 27px 48px 60px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+
+  @media (max-width: 640px) {
+    padding: 24px 18px 48px;
+  }
+`;
+
+const BackLink = styled.button`
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 10px;
+  line-height: 10px;
+  color: #919191;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &::before {
+    content: "‹";
+    font-size: 12px;
+  }
+`;
+
+const TopRow = styled.div`
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 36px;
+`;
+
+const PageTitle = styled.p`
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #222;
+`;
+
+const StateText = styled.p`
+  margin: 0 0 16px;
+  font-size: 12px;
+  line-height: 18px;
+  color: #6b6b65;
+`;
+
+/** 디자인의 3단 구성 — 왼쪽 묶음(882) : 이력(432) */
+const Columns = styled.div`
+  ${reveal}
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 882fr) minmax(0, 432fr);
+  align-items: start;
+  gap: 32px;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const MainGroup = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+`;
+
+/** 식별 정보(424) : 일정·위치(425) */
+const Cards = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 424fr) minmax(0, 425fr);
+  align-items: stretch;
+  gap: 33px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+`;
+
+/** 일정·위치 두 카드는 왼쪽 카드 높이에 맞춰 위아래로 벌어진다 */
+const SideStack = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+`;
+
+const Card = styled.div`
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius-card);
+`;
+
+const CardHeader = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 20px;
+`;
+
+const CardHeaderInner = styled.p`
+  width: 100%;
+  margin: 0;
+  padding: 20px 0;
+  border-bottom: 1px solid #d1d5db;
+  box-sizing: border-box;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #222;
+`;
+
+const CardBody = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+`;
+
+/** 제품 사진 자리. 사진이 없어도 카드 높이가 흔들리지 않게 상자를 남긴다. */
+const Photo = styled.div`
+  width: 100%;
+  height: 190px;
+  flex: none;
+  overflow: hidden;
+  background: #f2f2f0;
+`;
+
+const PhotoImg = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+`;
+
+const Row = styled.div`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: ${(props) => (props.$last ? "none" : "1px solid #ededed")};
+`;
+
+const Key = styled.span`
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 16.5px;
+  color: #919191;
+`;
+
+const Val = styled.span`
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  text-align: right;
+  word-break: break-word;
+  color: #222;
+`;
+
+const NoticeBox = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #f0f0f0;
+  border-radius: var(--radius-card);
+`;
+
+const NoticeTitle = styled.p`
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16.5px;
+  color: #919191;
+`;
+
+const NoticeBody = styled.p`
+  margin: 0;
+  font-size: 11px;
+  line-height: 17.875px;
+  color: #c4c4c4;
+`;
+
+/* ── 상담 배너 ── */
+
+const ConsultBanner = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
+  background: #313131;
+  border-radius: var(--radius-card);
+`;
+
+const ConsultTexts = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const ConsultTitle = styled.p`
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  color: #fff;
+`;
+
+const ConsultDesc = styled.p`
+  margin: 0;
+  font-size: 12px;
+  line-height: 19.5px;
+  color: rgba(255, 255, 255, 0.5);
+`;
+
+/** 어두운 배너 위라 공용 Button 의 검은 배경을 쓸 수 없다. 크기·모서리는 토큰을 따른다. */
+const ConsultButton = styled.button`
+  flex-shrink: 0;
+  padding: 12px 24px;
+  background: #fff;
+  border: 1px solid #fff;
+  border-radius: var(--radius-control);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #222;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #ededed;
+    border-color: #ededed;
+  }
+`;
+
+/* ── 수선 진행 이력 ── */
+
+const TimelineBody = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+`;
+
+const Entry = styled.div`
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  padding-top: 12px;
+
+  &:first-child {
+    padding-top: 4px;
+  }
+`;
+
+/** 점과 연결선이 놓이는 세로 레일 */
+const Rail = styled.div`
+  width: 20px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+`;
+
+const Dot = styled.span`
+  width: 12px;
+  height: 12px;
+  flex: none;
+  box-sizing: border-box;
+  border-radius: var(--radius-pill);
+
+  ${(props) =>
+    props.$state === "done" &&
+    css`
+      background: #222;
+      border: 2px solid #222;
+    `}
+  ${(props) =>
+    props.$state === "now" &&
+    css`
+      background: #fff;
+      border: 2px solid #222;
+    `}
+  ${(props) =>
+    props.$state === "next" &&
+    css`
+      background: #fff;
+      border: 2px solid #c4c4c4;
+    `}
+`;
+
+const Line = styled.span`
+  flex: 1 1 auto;
+  min-height: 24px;
+  width: 1px;
+  background: #c4c4c4;
+`;
+
+const EntryBody = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 4px;
+`;
+
+const EntryHead = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+`;
+
+const EntryTitle = styled.p`
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 19.5px;
+  color: ${(props) => (props.$state === "next" ? "#c4c4c4" : "#222")};
+`;
+
+const NowBadge = styled.span`
+  padding: 2px 8px;
+  background: #222;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  line-height: 15px;
+  letter-spacing: 1px;
+  color: #fff;
+`;
+
+const NextBadge = styled.span`
+  font-size: 10px;
+  line-height: 15px;
+  letter-spacing: 1px;
+  color: #c4c4c4;
+`;
+
+const EntryDate = styled.p`
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 16.5px;
+  font-variant-numeric: tabular-nums;
+  color: ${(props) => (props.$state === "next" ? "#ededed" : "#919191")};
+`;
+
+const EntryDesc = styled.p`
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 19.5px;
+  color: ${(props) => (props.$state === "next" ? "#ededed" : "#919191")};
+`;
