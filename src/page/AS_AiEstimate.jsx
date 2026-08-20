@@ -117,6 +117,12 @@ export default function AS_AiEstimate() {
     { label: "보증 적용 검토 결과", value: data?.warrantyVerdictLabel ?? "—" },
   ];
 
+  /**
+   * 조회한 접수 건에 저장된 견적이 아예 없는 경우 (404 NO_MATCHING_DATA).
+   * 실패가 아니라 "아직 없음" 이라, 오류 문구 대신 빈 상태를 보여 준다.
+   */
+  const noEstimate = error?.code === "NO_MATCHING_DATA";
+
   // 명세 3-4: ESTIMATE_FAILED 상태에서만 재분석이 가능하다
   const canRetry =
     data?.status === "ESTIMATE_FAILED" ||
@@ -182,7 +188,7 @@ export default function AS_AiEstimate() {
         </TopRow>
 
         {loading && <StateBanner>{t("견적을 불러오는 중…")}</StateBanner>}
-        {!loading && error && (
+        {!loading && error && !noEstimate && (
           <StateBanner>
             {t(toErrorMessage(error, "견적을 불러오지 못했습니다."))}
             {canRetry && (
@@ -193,6 +199,16 @@ export default function AS_AiEstimate() {
           </StateBanner>
         )}
 
+        {noEstimate ? (
+          <EmptyCard>
+            <EmptyTitle>{t("저장된 AI 견적이 없습니다")}</EmptyTitle>
+            <EmptyDesc>
+              {t(
+                "이 접수 건은 AI 손상 분석을 거치지 않았습니다. 수선 센터 입고 후 실물 진단 결과로 최종 견적을 안내해 드립니다.",
+              )}
+            </EmptyDesc>
+          </EmptyCard>
+        ) : (
         <Columns $pending={loading}>
           <LeftColumn>
             <Card>
@@ -326,6 +342,7 @@ export default function AS_AiEstimate() {
             </Card>
           </RightColumn>
         </Columns>
+        )}
       </Body>
 
       <DamageDetailModal
@@ -858,4 +875,34 @@ const FinalNoticeText = styled.p`
   font-size: 11px;
   line-height: 17.875px;
   color: rgba(255, 255, 255, 0.5);
+`;
+
+const EmptyCard = styled.div`
+  ${reveal}
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 48px 24px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  text-align: center;
+`;
+
+const EmptyTitle = styled.p`
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px;
+  letter-spacing: 1px;
+  color: #222;
+`;
+
+const EmptyDesc = styled.p`
+  margin: 0;
+  font-size: 12px;
+  line-height: 19.5px;
+  color: #919191;
 `;

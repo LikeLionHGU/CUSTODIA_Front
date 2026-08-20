@@ -25,13 +25,13 @@ const LOCATION_NOTICE = {
 const SAMPLE_DETAIL = {
   asNo: "MCM-2024-009341",
   modelName: "MCM 클래식 백팩",
-  photoUrl: sampleProductImage,
+  photoUrlList: [sampleProductImage],
   createdAt: "2024-11-12",
   intakeType: "픽업 수거 접수",
   status: "REPAIRING",
   statusLabel: "수선중",
   expectedCompletedAt: "2024-12-03",
-  expectedUpdatedAt: "2024-11-20",
+  statusUpdatedAt: "2024-11-20",
   currentLocation: "MCM 서울 수선 센터",
   locationStatus: "수선 작업 중",
   historyList: [
@@ -190,7 +190,8 @@ export default function AS_MyDetail() {
                     <Row $last>
                       <Key>{t("최종 갱신")}</Key>
                       <Val>
-                        {data?.expectedUpdatedAt ? formatKoreanDate(data.expectedUpdatedAt) : "—"}
+                        {/* 서버는 상태가 바뀐 시각을 statusUpdatedAt 으로 준다 */}
+                        {data?.statusUpdatedAt ? formatKoreanDate(data.statusUpdatedAt) : "—"}
                       </Val>
                     </Row>
                   </CardBody>
