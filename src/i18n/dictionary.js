@@ -12,6 +12,9 @@ export const DICTIONARY = {
   "요청하신 정보를 찾을 수 없습니다.": "We couldn't find the requested information.",
   "접근 권한이 없습니다.": "You don't have permission to access this.",
   "로그인이 필요합니다.": "Please sign in to continue.",
+  "로그인이 필요합니다": "Sign in required",
+  "접수 내역과 수선 진행 상황은 로그인 후 확인할 수 있습니다.": "Your requests and repair progress are available once you sign in.",
+  "로그인하기": "Sign in",
   "서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.": "Couldn't reach the server. Please try again in a moment.",
   "불러오는 중…": "Loading…",
   "닫기": "Close",
@@ -95,6 +98,10 @@ export const DICTIONARY = {
 
   // 제품 정보 입력 (접수)
   "홈화면으로": "Back to home",
+  "작성 중인 접수를 나가시겠습니까?": "Leave this request?",
+  "작성하신 내용은 저장되지 않습니다.": "Anything you've entered will not be saved.",
+  "계속 작성": "Keep editing",
+  "나가기": "Leave",
   "접수 중…": "Submitting…",
   "예상 견적 확인하기": "See the estimate",
   "제품 정보": "Product",
@@ -346,6 +353,9 @@ export const DICTIONARY = {
   "요청하신 정보를 찾을 수 없습니다.": "Die angeforderten Informationen wurden nicht gefunden.",
   "접근 권한이 없습니다.": "Sie haben keine Zugriffsberechtigung.",
   "로그인이 필요합니다.": "Bitte melden Sie sich an.",
+  "로그인이 필요합니다": "Anmeldung erforderlich",
+  "접수 내역과 수선 진행 상황은 로그인 후 확인할 수 있습니다.": "Ihre Aufträge und den Reparaturfortschritt sehen Sie nach der Anmeldung.",
+  "로그인하기": "Anmelden",
   "서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.": "Der Server ist nicht erreichbar. Bitte versuchen Sie es gleich noch einmal.",
   "불러오는 중…": "Wird geladen…",
   "닫기": "Schließen",
@@ -429,6 +439,10 @@ export const DICTIONARY = {
 
   // 제품 정보 입력 (접수)
   "홈화면으로": "Zur Startseite",
+  "작성 중인 접수를 나가시겠습니까?": "Anfrage verlassen?",
+  "작성하신 내용은 저장되지 않습니다.": "Ihre Eingaben werden nicht gespeichert.",
+  "계속 작성": "Weiter bearbeiten",
+  "나가기": "Verlassen",
   "접수 중…": "Wird gesendet…",
   "예상 견적 확인하기": "Kostenschätzung ansehen",
   "제품 정보": "Produkt",

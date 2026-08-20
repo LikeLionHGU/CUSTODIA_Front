@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useBlocker, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import Button from "../components/Button";
 import StepIndicator from "../components/StepIndicator";
+import ConfirmLeaveModal from "../components/ConfirmLeaveModal";
 import * as asCase from "../api/asCase";
 import * as product from "../api/product";
 import { useApiQuery } from "../api/useApiQuery";
@@ -125,6 +126,38 @@ export default function AS_ProductInfo() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  /**
+   * 접수 내용은 "예상 견적 확인하기" 를 누를 때만 서버로 올라간다.
+   * 중간 저장이 없으므로, 뭔가 입력한 상태로 화면을 벗어나면 입력값은 사라진다.
+   * 그래서 한 번 확인을 받는다.
+   */
+  const isDirty = Object.values(formData).some((value) => value.trim() !== "") || photos.length > 0;
+
+  // 접수가 성공해 견적 화면으로 넘어갈 때는 막지 않는다.
+  // navigate 직전에 세워야 하므로 state 대신 ref 를 쓴다 (state 는 다음 렌더에나 반영된다).
+  const bypassLeaveGuardRef = useRef(false);
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isDirty &&
+      !bypassLeaveGuardRef.current &&
+      currentLocation.pathname !== nextLocation.pathname,
+  );
+
+  // 새로고침·탭 닫기는 라우터가 잡지 못하므로 브라우저 기본 경고를 쓴다.
+  // (문구는 브라우저가 정하며 바꿀 수 없다)
+  useEffect(() => {
+    if (!isDirty) return undefined;
+
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
+
   // 명세 3-1: 셀렉트 옵션 목록
   const { data: form, error: formError } = useApiQuery(() => asCase.getForm(), []);
 
@@ -202,11 +235,13 @@ export default function AS_ProductInfo() {
         photoTypeList: photos.map((_, index) => (index === 0 ? "PRODUCT" : "DAMAGE")),
       };
       const { asNo } = await asCase.create(request, photos.map((photo) => photo.file));
+      bypassLeaveGuardRef.current = true;
       navigate("/ai-estimate", { state: { asNo } });
     } catch (err) {
       // 명세 3-2: 분석 실패(502)여도 접수는 저장되므로 asNo 를 들고 견적 화면으로 보낸다
       const failedAsNo = err.body?.asNo;
       if (failedAsNo) {
+        bypassLeaveGuardRef.current = true;
         navigate("/ai-estimate", { state: { asNo: failedAsNo } });
         return;
       }
@@ -349,6 +384,12 @@ export default function AS_ProductInfo() {
           <SubmitError role="alert">{submitError || t(toErrorMessage(formError))}</SubmitError>
         )}
       </Body>
+
+      <ConfirmLeaveModal
+        open={blocker.state === "blocked"}
+        onStay={() => blocker.reset()}
+        onLeave={() => blocker.proceed()}
+      />
     </Page>
   );
 }

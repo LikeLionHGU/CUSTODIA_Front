@@ -1,3 +1,5 @@
+import { notifyLoginRequired } from "./authEvents";
+
 // 사다리타기 API 클라이언트
 // Base URL `/api` · 인증 `Authorization: Bearer {token}` · application/json
 // 개발 환경에서는 vite.config.js의 프록시가 /api 를 백엔드로 넘긴다.
@@ -73,6 +75,12 @@ export async function request(path, { method = "GET", body, formData, auth = tru
     const code = payload?.code;
     // 토큰 만료면 저장된 토큰을 버려 다음 요청이 무한히 실패하지 않게 한다.
     if (response.status === 401 && code === "TOKEN_EXPIRED") clearAccessToken();
+
+    // 로그인하지 않은 요청에는 서버가 403 NO_PERMISSION 을 준다.
+    // 토큰을 들고도 403 이면 남의 자원을 건드린 진짜 권한 문제이므로 로그인 안내를 띄우지 않는다.
+    const needsLogin =
+      response.status === 401 || (response.status === 403 && code === "NO_PERMISSION" && !token);
+    if (needsLogin) notifyLoginRequired();
 
     // 화면에는 message 만 노출되므로, 원인 추적용 상세는 콘솔에 남긴다.
     console.error(
