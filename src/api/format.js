@@ -1,5 +1,3 @@
-import { getAccessToken } from "./client";
-
 // API 응답의 날짜·금액을 화면 표기로 바꾸는 헬퍼.
 // 서버는 `2025-08-04` (LocalDate) 또는 `2024-11-20T14:32:00` (LocalDateTime) 을 준다.
 
@@ -70,12 +68,10 @@ export function toErrorMessage(error, fallback = "정보를 불러오지 못했�
   if (!error) return fallback;
   if (error.code === "NO_MATCHING_DATA") return "요청하신 정보를 찾을 수 없습니다.";
   if (error.status === 401) return "로그인이 필요합니다.";
-  // 로그인 전 요청에는 서버가 403 NO_PERMISSION 을 준다.
-  // 이때는 권한 얘기보다 무엇을 해야 하는지(로그인) 알려 주는 편이 낫다.
-  // 같은 상황에서 LoginRequiredModal 도 함께 떠서 문구가 어긋나지 않는다.
-  if (error.code === "NO_PERMISSION") {
-    return getAccessToken() ? "접근 권한이 없습니다." : "로그인이 필요합니다.";
-  }
+  // 서버는 미인증·만료·권한없음을 모두 403 NO_PERMISSION 으로 준다.
+  // 사용자가 할 수 있는 조치는 어느 쪽이든 로그인이므로 그렇게 안내한다.
+  // (같은 상황에서 LoginRequiredModal 도 함께 떠서 문구가 어긋나지 않는다)
+  if (error.code === "NO_PERMISSION") return "로그인이 필요합니다.";
 
   // fetch 자체가 실패하면(서버 다운·네트워크 차단·CORS) ApiError 가 아니라 TypeError 가 온다
   if (error.name === "TypeError") return "서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.";

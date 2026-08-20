@@ -76,10 +76,10 @@ export async function request(path, { method = "GET", body, formData, auth = tru
     // 토큰 만료면 저장된 토큰을 버려 다음 요청이 무한히 실패하지 않게 한다.
     if (response.status === 401 && code === "TOKEN_EXPIRED") clearAccessToken();
 
-    // 로그인하지 않은 요청에는 서버가 403 NO_PERMISSION 을 준다.
-    // 토큰을 들고도 403 이면 남의 자원을 건드린 진짜 권한 문제이므로 로그인 안내를 띄우지 않는다.
-    const needsLogin =
-      response.status === 401 || (response.status === 403 && code === "NO_PERMISSION" && !token);
+    // 서버는 토큰이 없을 때와 토큰이 만료·잘못됐을 때를 구분하지 않고
+    // 모두 403 NO_PERMISSION 을 준다. 그래서 토큰 유무로 갈라낼 수 없다.
+    // 만료된 세션을 되살릴 길이 없는 쪽이 더 큰 문제라, 이 코드는 늘 로그인 안내로 본다.
+    const needsLogin = response.status === 401 || code === "NO_PERMISSION";
     if (needsLogin) notifyLoginRequired();
 
     // 화면에는 message 만 노출되므로, 원인 추적용 상세는 콘솔에 남긴다.

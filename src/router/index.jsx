@@ -1,8 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import MainLayout from "../layouts/MainLayout";
-import MCM_Landing from "../page/MCM_Landing";
-import MCM_Home from "../page/MCM_Home";
+import HomeRoute from "./HomeRoute.jsx";
 import MCM_Login from "../page/MCM_Login";
 import MCM_Signup from "../page/MCM_Signup";
 import MCM_MyPage from "../page/MCM_MyPage";
@@ -25,15 +24,10 @@ const router = createBrowserRouter([
     path: "/",
     element: <MainLayout />,
     children: [
-      //===============랜딩 페이지 (첫 화면)==========================
+      //===============홈 (로그인 전 랜딩 / 로그인 후 접수 내역)==========================
       {
         index: true,
-        element: <MCM_Landing />,
-      },
-      //===============CUSTODIA 케어 (로그인 후 홈)==========================
-      {
-        path: "home",
-        element: <MCM_Home />,
+        element: <HomeRoute />,
       },
       //===============로그인==========================
       {

@@ -8,12 +8,12 @@ import LoginRequiredModal from "../components/LoginRequiredModal.jsx";
 import { onLoginRequired } from "../api/authEvents";
 
 /**
- * 로그인 안내를 띄우지 않는 화면.
- * - `/` 는 앞으로 랜딩 페이지가 될 자리다. 비로그인 방문자가 처음 보는 화면이라
- *   모달로 막지 않고, 화면 안의 안내 문구로만 알린다.
- * - 로그인·회원가입은 안내가 겹친다.
+ * 로그인 안내를 띄우지 않는 화면 — 안내가 겹치는 로그인·회원가입뿐이다.
+ *
+ * `/` 는 예외로 두지 않는다. 로그인 전에는 API 를 호출하지 않는 랜딩 페이지가 보이므로
+ * 실패할 요청이 없고, 로그인 후 홈에서 토큰이 만료됐다면 안내가 떠야 맞다.
  */
-const NO_LOGIN_PROMPT_PATHS = ["/", "/login", "/signup"];
+const NO_LOGIN_PROMPT_PATHS = ["/login", "/signup"];
 
 /**
  * 모든 화면이 공유하는 셸.
