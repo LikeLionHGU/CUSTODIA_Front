@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useBlocker, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import Button from "../components/Button";
@@ -7,7 +7,7 @@ import ConfirmLeaveModal from "../components/ConfirmLeaveModal";
 import * as asCase from "../api/asCase";
 import * as product from "../api/product";
 import { useApiQuery } from "../api/useApiQuery";
-import { toErrorMessage } from "../api/format";
+import { formatKoreanDate, toErrorMessage } from "../api/format";
 import { useT } from "../i18n";
 import backArrow from "../assets/icon_back_arrow.svg";
 import chevronDown from "../assets/icon_chevron_down.svg";
@@ -19,6 +19,10 @@ import infoIcon from "../assets/icon_info.svg";
 // 명세 3-2: images 는 1~4장. 5장 이상이면 400 TOO_MANY_PHOTOS
 const MAX_PHOTOS = 4;
 const MIN_PHOTOS = 1;
+
+// 보증서 자동 조회 — 이 길이 이상 입력되고 잠시 멈추면 찾아본다
+const WARRANTY_MIN_LENGTH = 4;
+const WARRANTY_DEBOUNCE_MS = 600;
 
 const PRODUCT_FIELDS = [
   {
@@ -63,7 +67,19 @@ function getTodayDateString() {
   return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 }
 
-function FormField({ name, label, type, options, placeholder, value, onChange, onBlur, max, full }) {
+function FormField({
+  name,
+  label,
+  type,
+  options,
+  placeholder,
+  value,
+  onChange,
+  onBlur,
+  max,
+  full,
+  hint,
+}) {
   const t = useT();
   // 언어가 바뀌어도 id 가 흔들리지 않도록 라벨 대신 필드 키를 쓴다
   const fieldId = `field-${name}`;
@@ -102,6 +118,7 @@ function FormField({ name, label, type, options, placeholder, value, onChange, o
           <SelectChevron src={chevronDown} alt="" />
         </SelectWrapper>
       )}
+      {hint}
     </FieldGroup>
   );
 }
@@ -129,6 +146,11 @@ export default function AS_ProductInfo() {
   // 사진 장수가 모자란 채 제출을 눌렀을 때, 업로드 카드의 안내 문구를 붉게 표시한다.
   // 사진을 추가하면 다시 원래 색으로 돌아간다.
   const [photoWarning, setPhotoWarning] = useState(false);
+
+  // 보증서 조회 상태와 결과. 무엇이 채워졌는지 사용자에게 알려 주기 위해 들고 있는다.
+  const [warranty, setWarranty] = useState({ state: "idle", detail: null });
+  // 같은 번호를 반복해서 조회하지 않도록 마지막으로 조회한 값을 기억한다
+  const lookedUpRef = useRef("");
 
   /**
    * 접수 내용은 "예상 견적 확인하기" 를 누를 때만 서버로 올라간다.
@@ -173,11 +195,16 @@ export default function AS_ProductInfo() {
 
   /**
    * 명세 2-1: 보증서 번호로 제품 정보를 자동 채운다.
-   * 404면 자동 채움만 생략하고 접수는 계속 진행한다. 구매처는 자동 채움 대상이 아니다.
+   *
+   * 응답에 담긴 제품 종류·모델명·구매일·구매처를 모두 채운다.
+   * 셀렉트에는 코드값(LUGGAGE · OFFICIAL_STORE)이 들어가고, 보이는 문구는
+   * /asCase/form 이 준 목록에서 맞춰진다.
+   *
+   * 찾지 못해도 접수는 계속 진행할 수 있다 — 아래 항목을 직접 채우면 된다.
    */
-  const handleWarrantyBlur = async () => {
-    const warrantyNo = formData.warrantyNo.trim();
-    if (!warrantyNo) return;
+  const lookUpWarranty = useCallback(async (warrantyNo) => {
+    lookedUpRef.current = warrantyNo;
+    setWarranty({ state: "loading", detail: null });
 
     try {
       const detail = await product.getByWarrantyNo(warrantyNo);
@@ -186,10 +213,35 @@ export default function AS_ProductInfo() {
         productType: detail.productType ?? prev.productType,
         modelName: detail.modelName ?? prev.modelName,
         purchasedAt: detail.purchasedAt ?? prev.purchasedAt,
+        purchaseChannel: detail.purchaseChannel ?? prev.purchaseChannel,
       }));
-    } catch {
-      // 보증서가 없으면 조용히 넘어간다
+      setWarranty({ state: "found", detail });
+    } catch (err) {
+      // 없는 보증서(404)와 그 밖의 실패를 구분해 문구를 다르게 준다
+      setWarranty({ state: err.status === 404 ? "notfound" : "error", detail: null });
     }
+  }, []);
+
+  // 입력을 멈추면 알아서 조회한다. 번호를 고치는 중에 매 글자마다 부르지 않도록 잠시 기다린다.
+  useEffect(() => {
+    const warrantyNo = formData.warrantyNo.trim();
+
+    if (warrantyNo.length < WARRANTY_MIN_LENGTH) {
+      lookedUpRef.current = "";
+      setWarranty({ state: "idle", detail: null });
+      return undefined;
+    }
+    if (warrantyNo === lookedUpRef.current) return undefined;
+
+    const timer = setTimeout(() => lookUpWarranty(warrantyNo), WARRANTY_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [formData.warrantyNo, lookUpWarranty]);
+
+  /** 입력칸을 벗어나면 기다리지 않고 바로 조회한다. */
+  const handleWarrantyBlur = () => {
+    const warrantyNo = formData.warrantyNo.trim();
+    if (warrantyNo.length < WARRANTY_MIN_LENGTH || warrantyNo === lookedUpRef.current) return;
+    lookUpWarranty(warrantyNo);
   };
 
   const handleAddPhotoClick = () => fileInputRef.current?.click();
@@ -262,6 +314,43 @@ export default function AS_ProductInfo() {
     }
   };
 
+  /** 보증서 조회 결과를 입력칸 아래에 알려 준다. */
+  const renderWarrantyHint = () => {
+    if (warranty.state === "loading") {
+      return <FieldHint>{t("보증서 정보를 확인하는 중…")}</FieldHint>;
+    }
+    if (warranty.state === "found") {
+      const { warrantyMonths, warrantyExpiresAt, warrantyScope } = warranty.detail ?? {};
+      const parts = [
+        warrantyMonths ? t("보증 {months}개월", { months: warrantyMonths }) : null,
+        warrantyExpiresAt ? t("{date} 까지", { date: formatKoreanDate(warrantyExpiresAt) }) : null,
+        warrantyScope ? t(warrantyScope) : null,
+      ].filter(Boolean);
+
+      return (
+        <FieldHint $tone="ok">
+          {t("보증서 정보를 불러와 아래 항목을 채웠습니다.")}
+          {parts.length > 0 && ` · ${parts.join(" · ")}`}
+        </FieldHint>
+      );
+    }
+    if (warranty.state === "notfound") {
+      return (
+        <FieldHint $tone="warn">
+          {t("해당 보증서 번호를 찾을 수 없습니다. 아래 항목을 직접 입력해 주세요.")}
+        </FieldHint>
+      );
+    }
+    if (warranty.state === "error") {
+      return (
+        <FieldHint $tone="warn">
+          {t("보증서 정보를 확인하지 못했습니다. 아래 항목을 직접 입력해 주세요.")}
+        </FieldHint>
+      );
+    }
+    return null;
+  };
+
   return (
     <Page>
       <Body>
@@ -302,6 +391,7 @@ export default function AS_ProductInfo() {
                       value={formData[field.key]}
                       onChange={handleFieldChange(field.key)}
                       onBlur={field.key === "warrantyNo" ? handleWarrantyBlur : undefined}
+                      hint={field.key === "warrantyNo" ? renderWarrantyHint() : undefined}
                       max={field.type === "date" ? todayDateString : undefined}
                     />
                   ))}
@@ -585,6 +675,14 @@ const FieldLabel = styled.label`
  * 높이(--control-height)·여백·테두리·포커스 링을 여기서만 정하므로
  * 어떤 타입이든 같은 크기와 같은 모서리로 보인다.
  */
+const FieldHint = styled.p`
+  margin: 0;
+  font-size: 11px;
+  line-height: 17.875px;
+  color: ${(props) =>
+    props.$tone === "ok" ? "#4b7c5a" : props.$tone === "warn" ? "#c0392b" : "#919191"};
+`;
+
 const fieldBox = `
   width: 100%;
   min-height: var(--control-height);

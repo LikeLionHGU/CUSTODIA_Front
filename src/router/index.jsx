@@ -5,6 +5,7 @@ import HomeRoute from "./HomeRoute.jsx";
 import MCM_Login from "../page/MCM_Login";
 import MCM_Signup from "../page/MCM_Signup";
 import MCM_MyPage from "../page/MCM_MyPage";
+import MCM_Demo from "../page/MCM_Demo";
 import AS_ProductInfo from "../page/AS_ProductInfo";
 import AS_AiEstimate from "../page/AS_AiEstimate";
 import AS_MyList from "../page/AS_MyList";
@@ -38,6 +39,12 @@ const router = createBrowserRouter([
       {
         path: "signup",
         element: <MCM_Signup />,
+      },
+
+      //===============서비스 흐름 시연==========================
+      {
+        path: "demo",
+        element: <MCM_Demo />,
       },
 
       //===============마이페이지==========================
