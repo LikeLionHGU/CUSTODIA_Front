@@ -7,6 +7,7 @@ import StatusLabel from "../components/StatusLabel";
 import * as asCaseApi from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
 import { formatDotDate, formatKoreanDate, toErrorMessage } from "../api/format";
+import { resolvePhotoUrl } from "../api/photo";
 import { reveal } from "../css/motion";
 import { useT } from "../i18n";
 
@@ -98,8 +99,8 @@ export default function AS_MyDetail() {
   // 완료된 단계 중 마지막이 현재 단계다
   const currentIndex = historyList.reduce((last, step, i) => (step.completed ? i : last), -1);
 
-  // 접수 시 올린 제품 사진. 응답 필드 이름이 화면마다 달라 둘 다 받아 둔다.
-  const photoUrl = data?.photoUrl ?? data?.thumbnailUrl;
+  // 접수 시 올린 제품 사진. 응답이 어떤 필드 이름을 쓰든 찾아 온다.
+  const photoUrl = resolvePhotoUrl(data);
 
   const handleGoToList = () => navigate("/my-as-list");
 

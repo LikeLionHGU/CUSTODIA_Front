@@ -6,6 +6,7 @@ import StatusLabel from "../components/StatusLabel";
 import * as asCase from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
 import { formatDotDate, toErrorMessage } from "../api/format";
+import { resolvePhotoUrl } from "../api/photo";
 import chevronDown from "../assets/icon_chevron_down.svg";
 import { useLanguage } from "../i18n";
 import { reveal, revealOnMount } from "../css/motion";
@@ -147,11 +148,11 @@ export default function AS_MyList() {
                 onClick={() => navigate("/my-as-detail", { state: { asNo: item.asNo } })}
               >
                 <Thumb>
-                  {/* thumbnailUrl 은 접수 시 올린 첫 사진의 서명 URL (유효 24시간).
+                  {/* 접수 시 올린 첫 사진의 서명 URL (유효 24시간).
                       저장해 두고 재사용하지 말 것 — 만료되면 화면을 다시 조회한다. */}
-                  {item.thumbnailUrl && (
+                  {resolvePhotoUrl(item) && (
                     <ThumbImage
-                      src={item.thumbnailUrl}
+                      src={resolvePhotoUrl(item)}
                       alt=""
                       onError={(e) => {
                         e.currentTarget.style.display = "none";

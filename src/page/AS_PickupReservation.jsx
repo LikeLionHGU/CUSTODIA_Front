@@ -12,6 +12,7 @@ import safetyPhotoRecord from "../assets/safety_photo_record.jpg";
 import safetySignature from "../assets/safety_signature.jpg";
 import safetyInsurance from "../assets/safety_insurance.jpg";
 import styled from "styled-components";
+import { resolvePhotoUrl } from "../api/photo";
 import { useT } from "../i18n";
 
 const WEEKDAYS_KO = ["일", "월", "화", "수", "목", "금", "토"];
@@ -753,7 +754,7 @@ export default function AS_PickupReservation() {
     receiptNumber: form?.asNo ?? asNo ?? "—",
     status: form?.statusLabel ?? "—",
     // 명세 4-1 의 photoUrl — 접수 시 올린 제품 사진
-    photoUrl: form?.photoUrl,
+    photoUrl: resolvePhotoUrl(form),
   };
 
   const minSelectableDate = useMemo(() => getTomorrow(), []);

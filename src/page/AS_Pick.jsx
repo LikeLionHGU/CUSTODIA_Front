@@ -6,6 +6,7 @@ import StatusLabel from "../components/StatusLabel";
 import * as asCase from "../api/asCase";
 import { useApiQuery } from "../api/useApiQuery";
 import { formatDotDate, toErrorMessage } from "../api/format";
+import { resolvePhotoUrl } from "../api/photo";
 import { useT } from "../i18n";
 import { revealOnMount } from "../css/motion";
 
@@ -60,9 +61,9 @@ export default function AS_Pick() {
             <CaseCard key={item.asNo} $index={index}>
               <CaseInfo>
                 <CaseThumb>
-                  {item.thumbnailUrl && (
+                  {resolvePhotoUrl(item) && (
                     <CaseThumbImage
-                      src={item.thumbnailUrl}
+                      src={resolvePhotoUrl(item)}
                       alt=""
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
